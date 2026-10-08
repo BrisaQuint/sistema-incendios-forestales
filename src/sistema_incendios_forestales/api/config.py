@@ -8,14 +8,6 @@ from pathlib import Path
 from typing import Mapping
 
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
-_REQUIRED_SNAPSHOT_FILES = (
-    Path("manifest.json"),
-    Path("data") / "scientific.sqlite",
-    Path("coverage") / "province.geojson",
-    Path("coverage") / "weather-grid.geojson",
-)
-
-
 class RuntimeConfigurationError(RuntimeError):
     """Raised when required local runtime configuration is missing or invalid."""
 
@@ -43,10 +35,6 @@ def load_settings(environ: Mapping[str, str] | None = None) -> RuntimeSettings:
         snapshot_dir = Path(snapshot_dir_value).expanduser().resolve()
         if not snapshot_dir.is_dir():
             errors.append(f"Snapshot directory does not exist: {snapshot_dir}")
-        else:
-            for relative_path in _REQUIRED_SNAPSHOT_FILES:
-                if not (snapshot_dir / relative_path).is_file():
-                    errors.append(f"Snapshot file is missing: {relative_path.as_posix()}")
 
     if not snapshot_version:
         errors.append("FIREWATCH_SNAPSHOT_VERSION is required")

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
+from conftest import create_valid_snapshot
 from sistema_incendios_forestales import main
 from sistema_incendios_forestales.api.app import FRONTEND_DIST, app
 from sistema_incendios_forestales.api.config import (
@@ -23,28 +24,16 @@ from sistema_incendios_forestales.api.contracts import AnalysisRequest, TraceEve
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def snapshot_environment(tmp_path: Path, provider: str = "mock") -> dict[str, str]:
-    for relative_path in (
-        "manifest.json",
-        "data/scientific.sqlite",
-        "coverage/province.geojson",
-        "coverage/weather-grid.geojson",
-    ):
-        file_path = tmp_path / relative_path
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text("{}", encoding="utf-8")
-
-    return {
-        "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
-        "FIREWATCH_SNAPSHOT_VERSION": "test-release",
-        "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": "a" * 64,
-        "FIREWATCH_LLM_PROVIDER": provider,
-    }
-
-
 @pytest.fixture
 def ready_runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    for key, value in snapshot_environment(tmp_path).items():
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    environment = {
+        "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+        "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+        "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+        "FIREWATCH_LLM_PROVIDER": "mock",
+    }
+    for key, value in environment.items():
         monkeypatch.setenv(key, value)
 
 
@@ -54,7 +43,13 @@ def test_runtime_rejects_missing_snapshot_configuration() -> None:
 
 
 def test_runtime_rejects_invalid_openai_provider_configuration(tmp_path: Path) -> None:
-    environment = snapshot_environment(tmp_path, provider="openai")
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    environment = {
+        "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+        "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+        "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+        "FIREWATCH_LLM_PROVIDER": "openai",
+    }
 
     with pytest.raises(RuntimeConfigurationError) as error:
         load_settings(environment)
@@ -89,7 +84,14 @@ def test_runtime_does_not_start_with_invalid_openai_configuration(
         "FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN",
     ):
         monkeypatch.delenv(key, raising=False)
-    for key, value in snapshot_environment(tmp_path, provider="openai").items():
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    environment = {
+        "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+        "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+        "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+        "FIREWATCH_LLM_PROVIDER": "openai",
+    }
+    for key, value in environment.items():
         monkeypatch.setenv(key, value)
 
     with pytest.raises(RuntimeError, match="OPENAI_API_KEY is required"):
@@ -97,10 +99,20 @@ def test_runtime_does_not_start_with_invalid_openai_configuration(
             pass
 
 
-def test_runtime_accepts_explicit_mock_provider_and_complete_snapshot(tmp_path: Path) -> None:
-    settings = load_settings(snapshot_environment(tmp_path))
+def test_runtime_accepts_explicit_mock_provider_and_complete_snapshot(
+    tmp_path: Path,
+) -> None:
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    settings = load_settings(
+        {
+            "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+            "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+            "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+            "FIREWATCH_LLM_PROVIDER": "mock",
+        }
+    )
 
-    assert settings.snapshot_version == "test-release"
+    assert settings.snapshot_version == "1.0.0"
     assert settings.llm_provider == "mock"
     assert settings.snapshot_dir == tmp_path.resolve()
 
@@ -154,7 +166,7 @@ def test_openapi_exposes_typed_vertical_contracts(ready_runtime: None) -> None:
     assert request_schema["properties"]["date"]["format"] == "date"
     assert request_schema["additionalProperties"] is False
     assert ready.status_code == 200
-    assert ready.json() == {"status": "ready", "snapshot_version": "test-release"}
+    assert ready.json() == {"status": "ready", "snapshot_version": "1.0.0"}
     assert page.status_code == 200
     assert "FireWatch" in page.text
     assert asset.status_code == 200

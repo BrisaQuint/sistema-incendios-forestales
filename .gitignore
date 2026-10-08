@@ -222,6 +222,7 @@ __marimo__/
 # Datos locales
 data/raw/*
 data/processed/*
+data/snapshots/
 
 # Mantener estructura de carpetas
 !data/raw/.gitkeep

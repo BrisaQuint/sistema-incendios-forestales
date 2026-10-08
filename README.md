@@ -19,7 +19,17 @@ npm --prefix frontend run build
 
 ### Configuración y arranque
 
-Antes de iniciar, aprovisione un snapshot local con `manifest.json`, `data/scientific.sqlite`, `coverage/province.geojson` y `coverage/weather-grid.geojson`. Configure `FIREWATCH_SNAPSHOT_DIR`, `FIREWATCH_SNAPSHOT_VERSION` y `FIREWATCH_SNAPSHOT_MANIFEST_SHA256`. El runtime no está listo si falta cualquiera de estos archivos o valores.
+Antes de iniciar, construya una release local del snapshot a partir de las salidas offline existentes:
+
+```powershell
+uv run python src/data/build_snapshot.py --release-id 2026-10-08-1
+```
+
+El builder consume el límite IGN, la cuadrícula y sus 169 ubicaciones meteorológicas, los CSV gzip meteorológicos/FWI 2020–2025 y el dataset analítico/FIRMS 2021–2025. No llama a servicios de datos. Comprueba esquema y cobertura temporal por año, identidad canónica, duplicados, faltantes, finitud y rangos; contrasta los componentes FWI del dataset analítico con sus salidas fuente, y verifica los totales publicados del período: 370.448 filas diarias, 308.594 celdas-día, 10.956 detecciones y 2.286 celdas-día con detección.
+
+El release builder crea una sola vez `manifest.json`, `data/scientific.sqlite`, `coverage/province.geojson` y `coverage/weather-grid.geojson`; valida el artefacto terminado y se niega a sobrescribir un release existente. Imprime el SHA-256 del manifiesto para fijarlo en `FIREWATCH_SNAPSHOT_MANIFEST_SHA256`. Los bundles generados viven bajo `data/snapshots/`, están fuera de Git y no se reemplazan automáticamente.
+
+Configure `FIREWATCH_SNAPSHOT_DIR` con el directorio del release, `FIREWATCH_SNAPSHOT_VERSION=1.0.0` y el digest impreso. Antes de readiness, el runtime valida el schema/versiones del manifiesto, su digest configurado, tamaño/SHA-256 de cada payload, integridad/esquema SQLite, IDs y fechas diarios, referencias mensuales, geometrías EPSG:4326 y la correspondencia exacta entre SQLite y los 169 features. Abre SQLite con `mode=ro&immutable=1` y lo cierra al apagar. Si alguna verificación falla, el proceso no llega a readiness: no descarga ni repara datos, ni cambia o sustituye el bundle.
 
 El proveedor por defecto es OpenAI. Selecciónelo solo con `OPENAI_API_KEY`, `FIREWATCH_OPENAI_MODEL`, `FIREWATCH_LLM_TIMEOUT_SECONDS`, `FIREWATCH_LLM_MAX_RETRIES` (0–2) y `FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN` válidos. Para desarrollo sin llamadas externas, `FIREWATCH_LLM_PROVIDER=mock` debe seleccionarse explícitamente; nunca se usa como fallback.
 
@@ -31,9 +41,9 @@ uv run sistema-incendios-forestales
 
 El servidor escucha solo en `127.0.0.1:8000` y se ejecuta con un worker. En esta story readiness comprueba configuración y presencia de los archivos requeridos; la validación de versión, digest, esquema y contenido íntegro del snapshot corresponde a Story 1.2.
 
-### Pruebas focalizadas de Story 1.1
+### Pruebas focalizadas de Stories 1.1–1.2
 
 ```powershell
-uv run pytest tests/test_runtime_contracts.py
+uv run pytest tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
 npm --prefix frontend run build
 ```

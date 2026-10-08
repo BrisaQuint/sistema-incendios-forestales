@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,7 +11,6 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from sistema_incendios_forestales.api.config import (
     RuntimeConfigurationError,
-    RuntimeSettings,
     load_settings,
 )
 from sistema_incendios_forestales.api.contracts import (
@@ -20,6 +19,7 @@ from sistema_incendios_forestales.api.contracts import (
     ErrorResponse,
     ReadinessResponse,
 )
+from sistema_incendios_forestales.snapshot import SnapshotValidationError, validate_snapshot
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
@@ -38,8 +38,21 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
             "Run the documented frontend build before starting FireWatch."
         )
 
+    try:
+        snapshot = validate_snapshot(
+            settings.snapshot_dir,
+            expected_version=settings.snapshot_version,
+            expected_manifest_sha256=settings.snapshot_manifest_sha256,
+        )
+    except SnapshotValidationError as error:
+        raise RuntimeError(str(error)) from error
+
     application.state.settings = settings
-    yield
+    application.state.snapshot = snapshot
+    try:
+        yield
+    finally:
+        snapshot.close()
 
 
 app = FastAPI(
@@ -98,8 +111,11 @@ async def http_error(request: Request, error: HTTPException) -> JSONResponse:
 
 @app.get("/api/health/ready", response_model=ReadinessResponse)
 async def readiness(request: Request) -> ReadinessResponse:
-    settings: RuntimeSettings = request.app.state.settings
-    return ReadinessResponse(status="ready", snapshot_version=settings.snapshot_version)
+    snapshot = request.app.state.snapshot
+    return ReadinessResponse(
+        status="ready",
+        snapshot_version=snapshot.manifest["bundle_version"],
+    )
 
 
 @app.get("/", include_in_schema=False)

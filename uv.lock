@@ -677,6 +677,7 @@ dependencies = [
     { name = "cffdrs" },
     { name = "fastapi" },
     { name = "geopandas" },
+    { name = "jsonschema" },
     { name = "pandas" },
     { name = "uvicorn" },
 ]
@@ -684,7 +685,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
-    { name = "jsonschema" },
     { name = "pytest" },
 ]
 
@@ -693,6 +693,7 @@ requires-dist = [
     { name = "cffdrs", git = "https://github.com/cffdrs/cffdrs_py.git" },
     { name = "fastapi", specifier = "==0.142.4" },
     { name = "geopandas", specifier = ">=1.1.4" },
+    { name = "jsonschema", specifier = ">=4.25,<5" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
@@ -700,7 +701,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.28,<1" },
-    { name = "jsonschema", specifier = ">=4.25,<5" },
     { name = "pytest", specifier = ">=8.4,<10" },
 ]
 
