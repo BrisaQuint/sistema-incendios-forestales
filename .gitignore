@@ -223,6 +223,7 @@ __marimo__/
 data/raw/*
 data/processed/*
 data/snapshots/
+data/firewatch-audit.sqlite*
 
 # Mantener estructura de carpetas
 !data/raw/.gitkeep

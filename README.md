@@ -39,11 +39,15 @@ Con la configuración completa, el comando documentado de ejecución es:
 uv run sistema-incendios-forestales
 ```
 
-El servidor escucha solo en `127.0.0.1:8000` y se ejecuta con un worker. En esta story readiness comprueba configuración y presencia de los archivos requeridos; la validación de versión, digest, esquema y contenido íntegro del snapshot corresponde a Story 1.2.
+El servidor escucha solo en `127.0.0.1:8000` y se ejecuta con un worker. `FIREWATCH_AUDIT_DB` permite elegir la ruta de la base local de análisis; su valor predeterminado es `data/firewatch-audit.sqlite`. La base de auditoría es independiente del snapshot científico, que permanece read-only.
 
-### Pruebas focalizadas de Stories 1.1–1.2
+`GET /api/coverage` entrega el GeoJSON de las 169 ubicaciones, fechas y procedencia del bundle. `POST /api/analyses` recibe `{ "weather_id": "...", "date": "YYYY-MM-DD" }` y responde `202` con el `analysis_id`; `GET /api/analyses/{analysis_id}` permite consultar el estado y resultado diario. Cada run consulta exactamente una ubicación y fecha; no interpola ni agrega FWI entre días. El resultado incluye meteorología, componentes FWI, referencia mediana de la misma ubicación y mes, diferencia descriptiva, cantidad `firms_count` y referencias reales al snapshot/manifest. Cero FIRMS asociado no significa ausencia de incendio. Las ausencias se expresan como `null` con motivo, nunca como cero.
+
+La primera implementación persiste `run_queued`, `run_started`, `analysis_core_result_persisted` y el evento terminal junto con la proyección del resultado; no crea eventos de agente. La transacción de finalización confirma conjuntamente resultado/proyección y eventos de inicio, resultado central y terminal.
+
+### Pruebas focalizadas de Stories 1.1–1.3
 
 ```powershell
-uv run pytest tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
+uv run pytest tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
 npm --prefix frontend run build
 ```

@@ -31,6 +31,7 @@ def ready_runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
         "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
         "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+        "FIREWATCH_AUDIT_DB": str(tmp_path / "audit.sqlite"),
         "FIREWATCH_LLM_PROVIDER": "mock",
     }
     for key, value in environment.items():

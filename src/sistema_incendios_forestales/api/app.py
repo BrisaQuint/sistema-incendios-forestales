@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+import sqlite3
 from typing import AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -16,10 +17,22 @@ from sistema_incendios_forestales.api.config import (
 from sistema_incendios_forestales.api.contracts import (
     CONTRACT_MODELS,
     APIError,
+    AnalysisAccepted,
+    AnalysisRequest,
+    AnalysisResult,
+    CoverageResponse,
     ErrorResponse,
     ReadinessResponse,
 )
+from sistema_incendios_forestales.analysis import (
+    AnalysisContextError,
+    build_deterministic_result,
+    validate_analysis_request,
+)
+from sistema_incendios_forestales.audit import AuditStore
+from sistema_incendios_forestales.api.config import RuntimeSettings
 from sistema_incendios_forestales.snapshot import SnapshotValidationError, validate_snapshot
+from sistema_incendios_forestales.snapshot import ValidatedSnapshot
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
@@ -47,11 +60,19 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     except SnapshotValidationError as error:
         raise RuntimeError(str(error)) from error
 
+    try:
+        audit_store = AuditStore.open(settings.audit_db_path)
+    except (OSError, sqlite3.DatabaseError, RuntimeError):
+        snapshot.close()
+        raise
+
     application.state.settings = settings
     application.state.snapshot = snapshot
+    application.state.audit_store = audit_store
     try:
         yield
     finally:
+        audit_store.close()
         snapshot.close()
 
 
@@ -98,12 +119,18 @@ async def request_validation_error(
 
 @app.exception_handler(HTTPException)
 async def http_error(request: Request, error: HTTPException) -> JSONResponse:
-    response = ErrorResponse(
-        error=APIError(
+    if isinstance(error.detail, dict) and {"code", "message", "details"} <= set(
+        error.detail
+    ):
+        api_error = APIError.model_validate(error.detail)
+    else:
+        api_error = APIError(
             code=f"HTTP_{error.status_code}",
             message=str(error.detail),
             details={},
-        ),
+        )
+    response = ErrorResponse(
+        error=api_error,
         request_id=request.state.request_id,
     )
     return JSONResponse(status_code=error.status_code, content=response.model_dump(mode="json"))
@@ -116,6 +143,98 @@ async def readiness(request: Request) -> ReadinessResponse:
         status="ready",
         snapshot_version=snapshot.manifest["bundle_version"],
     )
+
+
+@app.get("/api/coverage", response_model=CoverageResponse)
+async def get_coverage(request: Request) -> CoverageResponse:
+    snapshot = request.app.state.snapshot
+    manifest = snapshot.manifest
+    return CoverageResponse(
+        type="FeatureCollection",
+        snapshot_version=manifest["bundle_version"],
+        release_id=manifest["release_id"],
+        provenance=manifest["provenance"],
+        source_references=manifest["source_references"],
+        date_coverage=manifest["date_coverage"],
+        features=snapshot.coverage["features"],
+    )
+
+
+async def _execute_analysis(
+    audit_store: AuditStore,
+    snapshot: ValidatedSnapshot,
+    settings: RuntimeSettings,
+    analysis_id: UUID,
+    analysis_request: AnalysisRequest,
+) -> None:
+    audit_store.execute(
+        analysis_id,
+        lambda: build_deterministic_result(
+            snapshot,
+            analysis_request,
+            analysis_id,
+            settings.snapshot_manifest_sha256,
+        ),
+    )
+
+
+@app.post(
+    "/api/analyses",
+    response_model=AnalysisAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_analysis(
+    analysis_request: AnalysisRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> AnalysisAccepted:
+    snapshot = request.app.state.snapshot
+    try:
+        validate_analysis_request(snapshot, analysis_request)
+    except AnalysisContextError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": error.code, "message": str(error), "details": {}},
+        ) from error
+
+    analysis_id = uuid4()
+    audit_store = request.app.state.audit_store
+    audit_store.create_queued(analysis_id, analysis_request)
+    background_tasks.add_task(
+        _execute_analysis,
+        audit_store,
+        snapshot,
+        request.app.state.settings,
+        analysis_id,
+        analysis_request,
+    )
+    return AnalysisAccepted(analysis_id=analysis_id, state="queued")
+
+
+@app.get("/api/analyses/{analysis_id}", response_model=AnalysisResult)
+async def get_analysis(analysis_id: str, request: Request) -> AnalysisResult:
+    try:
+        parsed_analysis_id = UUID(analysis_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "INVALID_ANALYSIS_ID",
+                "message": "analysis_id must be a UUID.",
+                "details": {},
+            },
+        ) from error
+    result = request.app.state.audit_store.get(parsed_analysis_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "ANALYSIS_NOT_FOUND",
+                "message": "No analysis exists for this analysis_id.",
+                "details": {},
+            },
+        )
+    return result
 
 
 @app.get("/", include_in_schema=False)

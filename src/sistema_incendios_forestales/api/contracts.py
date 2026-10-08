@@ -66,6 +66,10 @@ class CoverageFeature(ContractModel):
 class CoverageResponse(ContractModel):
     type: Literal["FeatureCollection"]
     snapshot_version: str
+    release_id: str
+    provenance: str
+    source_references: list[dict[str, str]]
+    date_coverage: dict[str, dict[str, date]]
     features: list[CoverageFeature]
 
 
@@ -110,14 +114,55 @@ class DataValue(ContractModel):
         return self
 
 
+class FWIComponents(ContractModel):
+    ffmc: DataValue
+    dmc: DataValue
+    dc: DataValue
+    isi: DataValue
+    bui: DataValue
+
+
+class MeteorologicalValues(ContractModel):
+    temperature_2m: DataValue
+    relative_humidity_2m: DataValue
+    wind_speed_10m: DataValue
+    rain_24h: DataValue
+
+
+class DeterministicResult(ContractModel):
+    fwi: DataValue
+    historical_reference_fwi: DataValue
+    difference_from_reference: DataValue
+    components: FWIComponents
+    meteorology: MeteorologicalValues
+    reference_month: int = Field(ge=1, le=12)
+    firms_count: DataValue
+    firms_interpretation: str
+    evidence_refs: list[str]
+    provenance: dict[str, Any]
+
+
 class AnalysisResult(ContractModel):
     analysis_id: UUID
     weather_id: str
     date: date
     state: AnalysisState
-    fwi: DataValue
-    historical_reference_fwi: DataValue
-    difference_from_reference: DataValue
+    result: DeterministicResult | None
+    error_code: str | None = None
+    error_message: str | None = None
+
+    @model_validator(mode="after")
+    def require_result_for_success(self) -> AnalysisResult:
+        if self.state == "completed" and self.result is None:
+            raise ValueError("completed analyses require a deterministic result")
+        if self.state == "failed" and not self.error_code:
+            raise ValueError("failed analyses require an error code")
+        return self
+
+
+class AnalysisAccepted(ContractModel):
+    analysis_id: UUID
+    state: Literal["queued"]
 
 
 class APIError(ContractModel):
@@ -214,7 +259,11 @@ class TraceEvent(ContractModel):
 CONTRACT_MODELS = (
     CoverageResponse,
     AnalysisRequest,
+    FWIComponents,
+    MeteorologicalValues,
+    DeterministicResult,
     AnalysisResult,
+    AnalysisAccepted,
     ErrorResponse,
     ReadinessResponse,
     TraceEvent,
