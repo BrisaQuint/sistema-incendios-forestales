@@ -21,19 +21,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Coverage */
+        get: operations["get_coverage_api_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Analysis */
+        post: operations["create_analysis_api_analyses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analyses/{analysis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analysis */
+        get: operations["get_analysis_api_analyses__analysis_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** ReadinessResponse */
-        ReadinessResponse: {
+        /** AnalysisAccepted */
+        AnalysisAccepted: {
             /**
-             * Status
+             * Analysis Id
+             * Format: uuid
+             */
+            analysis_id: string;
+            /**
+             * State
              * @constant
              */
-            status: "ready";
-            /** Snapshot Version */
-            snapshot_version: string;
+            state: "queued";
+        };
+        /** AnalysisRequest */
+        AnalysisRequest: {
+            /** Weather Id */
+            weather_id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+        };
+        /** AnalysisResult */
+        AnalysisResult: {
+            /**
+             * Analysis Id
+             * Format: uuid
+             */
+            analysis_id: string;
+            /** Weather Id */
+            weather_id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "queued" | "running" | "completed" | "partial" | "failed";
+            result: components["schemas"]["DeterministicResult"] | null;
+            /**
+             * Error Code
+             * @default null
+             */
+            error_code: string | null;
+            /**
+             * Error Message
+             * @default null
+             */
+            error_message: string | null;
         };
         /** Coordinates */
         Coordinates: {
@@ -65,6 +160,88 @@ export interface components {
             /** Available Dates */
             available_dates: string[];
         };
+        /** CoverageResponse */
+        CoverageResponse: {
+            /**
+             * Type
+             * @constant
+             */
+            type: "FeatureCollection";
+            /** Snapshot Version */
+            snapshot_version: string;
+            /** Release Id */
+            release_id: string;
+            /** Provenance */
+            provenance: string;
+            /** Source References */
+            source_references: components["schemas"]["SourceReference"][];
+            date_coverage: components["schemas"]["DateCoverage"];
+            /** Features */
+            features: components["schemas"]["CoverageFeature"][];
+        };
+        /** DataValue */
+        DataValue: {
+            /** Value */
+            value: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Missing Reason */
+            missing_reason: string | null;
+        };
+        /** DateCoverage */
+        DateCoverage: {
+            spin_up: components["schemas"]["DateRange"];
+            analysis: components["schemas"]["DateRange"];
+        };
+        /** DateRange */
+        DateRange: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+        };
+        /** DeterministicResult */
+        DeterministicResult: {
+            fwi: components["schemas"]["DataValue"];
+            historical_reference_fwi: components["schemas"]["DataValue"];
+            difference_from_reference: components["schemas"]["DataValue"];
+            components: components["schemas"]["FWIComponents"];
+            meteorology: components["schemas"]["MeteorologicalValues"];
+            /** Reference Month */
+            reference_month: number;
+            firms_count: components["schemas"]["DataValue"];
+            /** Firms Interpretation */
+            firms_interpretation: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            provenance: components["schemas"]["SnapshotProvenance"];
+        };
+        /** FWIComponents */
+        FWIComponents: {
+            ffmc: components["schemas"]["DataValue"];
+            dmc: components["schemas"]["DataValue"];
+            dc: components["schemas"]["DataValue"];
+            isi: components["schemas"]["DataValue"];
+            bui: components["schemas"]["DataValue"];
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** MeteorologicalValues */
+        MeteorologicalValues: {
+            temperature_2m: components["schemas"]["DataValue"];
+            relative_humidity_2m: components["schemas"]["DataValue"];
+            wind_speed_10m: components["schemas"]["DataValue"];
+            rain_24h: components["schemas"]["DataValue"];
+        };
         /** MultiPolygonGeometry */
         MultiPolygonGeometry: {
             /**
@@ -91,59 +268,70 @@ export interface components {
                 number
             ][][];
         };
-        /** CoverageResponse */
-        CoverageResponse: {
+        /** QualityCheck */
+        QualityCheck: {
             /**
-             * Type
+             * Status
              * @constant
              */
-            type: "FeatureCollection";
+            status: "passed";
+            /** Observed */
+            observed: number | string;
+            /**
+             * Expected
+             * @default null
+             */
+            expected: number | string | null;
+        };
+        /** ReadinessResponse */
+        ReadinessResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ready";
             /** Snapshot Version */
             snapshot_version: string;
-            /** Features */
-            features: components["schemas"]["CoverageFeature"][];
         };
-        /** AnalysisRequest */
-        AnalysisRequest: {
-            /** Weather Id */
-            weather_id: string;
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
+        /** SnapshotProvenance */
+        SnapshotProvenance: {
+            /** Release Id */
+            release_id: string;
+            /** Bundle Version */
+            bundle_version: string;
+            /** Schema Version */
+            schema_version: string;
+            /** Manifest Sha256 */
+            manifest_sha256: string;
+            /** Source References */
+            source_references: components["schemas"]["SourceReference"][];
+            date_coverage: components["schemas"]["DateCoverage"];
+            /** Quality Checks */
+            quality_checks: {
+                [key: string]: components["schemas"]["QualityCheck"];
+            };
         };
-        /** DataValue */
-        DataValue: {
-            /** Value */
-            value: number | null;
-            /** Unit */
-            unit: string | null;
-            /** Missing Reason */
-            missing_reason: string | null;
+        /** SourceReference */
+        SourceReference: {
+            /** Source Id */
+            source_id: string;
+            /** Name */
+            name: string;
+            /** Reference */
+            reference: string;
         };
-        /** AnalysisResult */
-        AnalysisResult: {
-            /**
-             * Analysis Id
-             * Format: uuid
-             */
-            analysis_id: string;
-            /** Weather Id */
-            weather_id: string;
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "queued" | "running" | "completed" | "partial" | "failed";
-            fwi: components["schemas"]["DataValue"];
-            historical_reference_fwi: components["schemas"]["DataValue"];
-            difference_from_reference: components["schemas"]["DataValue"];
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** APIError */
         APIError: {
@@ -287,6 +475,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    get_coverage_api_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+        };
+    };
+    create_analysis_api_analyses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_api_analyses__analysis_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

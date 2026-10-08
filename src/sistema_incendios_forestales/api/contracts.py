@@ -63,13 +63,45 @@ class CoverageFeature(ContractModel):
     properties: CoverageProperties
 
 
+class SourceReference(ContractModel):
+    source_id: str
+    name: str
+    reference: str
+
+
+class DateRange(ContractModel):
+    start: date
+    end: date
+
+
+class DateCoverage(ContractModel):
+    spin_up: DateRange
+    analysis: DateRange
+
+
+class QualityCheck(ContractModel):
+    status: Literal["passed"]
+    observed: int | float | str
+    expected: int | float | str | None = None
+
+
+class SnapshotProvenance(ContractModel):
+    release_id: str
+    bundle_version: str
+    schema_version: str
+    manifest_sha256: str
+    source_references: list[SourceReference]
+    date_coverage: DateCoverage
+    quality_checks: dict[str, QualityCheck]
+
+
 class CoverageResponse(ContractModel):
     type: Literal["FeatureCollection"]
     snapshot_version: str
     release_id: str
     provenance: str
-    source_references: list[dict[str, str]]
-    date_coverage: dict[str, dict[str, date]]
+    source_references: list[SourceReference]
+    date_coverage: DateCoverage
     features: list[CoverageFeature]
 
 
@@ -139,7 +171,7 @@ class DeterministicResult(ContractModel):
     firms_count: DataValue
     firms_interpretation: str
     evidence_refs: list[str]
-    provenance: dict[str, Any]
+    provenance: SnapshotProvenance
 
 
 class AnalysisResult(ContractModel):
@@ -258,6 +290,11 @@ class TraceEvent(ContractModel):
 
 CONTRACT_MODELS = (
     CoverageResponse,
+    SourceReference,
+    DateRange,
+    DateCoverage,
+    QualityCheck,
+    SnapshotProvenance,
     AnalysisRequest,
     FWIComponents,
     MeteorologicalValues,

@@ -183,7 +183,10 @@ def test_missing_snapshot_values_remain_null_in_the_deterministic_result() -> No
             "bundle_version": "1.0.0",
             "schema_version": "firewatch.scientific-snapshot.v1",
             "source_references": [],
-            "date_coverage": {},
+            "date_coverage": {
+                "spin_up": {"start": "2020-01-01", "end": "2020-01-01"},
+                "analysis": {"start": "2021-01-01", "end": "2021-01-01"},
+            },
             "quality_checks": {},
         },
     )

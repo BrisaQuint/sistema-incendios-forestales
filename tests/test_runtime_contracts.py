@@ -171,7 +171,7 @@ def test_openapi_exposes_typed_vertical_contracts(ready_runtime: None) -> None:
     assert page.status_code == 200
     assert "FireWatch" in page.text
     assert asset.status_code == 200
-    assert asset.headers["content-type"] in {
+    assert asset.headers["content-type"].split(";", maxsplit=1)[0] in {
         "application/javascript",
         "text/javascript",
         "text/css",
