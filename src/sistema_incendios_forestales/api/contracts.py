@@ -22,6 +22,12 @@ TraceEventType = Literal[
     "run_partial",
     "run_failed",
 ]
+TraceAvailability = Literal[
+    "not_yet_recorded",
+    "available",
+    "incomplete",
+    "unavailable",
+]
 
 
 class ContractModel(BaseModel):
@@ -292,6 +298,32 @@ class TraceEvent(ContractModel):
         return self
 
 
+class TraceEventView(ContractModel):
+    analysis_id: UUID
+    sequence: int = Field(ge=1)
+    event_type: TraceEventType
+    occurred_at: datetime
+    intervention_id: UUID | None = None
+    agent_role: str | None = None
+    task: str | None = None
+    status: Literal["started", "completed", "failed", "recorded"]
+    result_summary: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    evidence: dict[str, str]
+    tool_name: str | None = None
+    error_code: str | None = None
+    affected_outputs: list[str] = Field(default_factory=list)
+
+
+class TraceResponse(ContractModel):
+    analysis_id: UUID
+    run_state: AnalysisState
+    trace_status: TraceAvailability
+    earliest_sequence: int | None
+    latest_sequence: int | None
+    events: list[TraceEventView]
+
+
 CONTRACT_MODELS = (
     CoverageResponse,
     SourceReference,
@@ -308,4 +340,6 @@ CONTRACT_MODELS = (
     ErrorResponse,
     ReadinessResponse,
     TraceEvent,
+    TraceEventView,
+    TraceResponse,
 )

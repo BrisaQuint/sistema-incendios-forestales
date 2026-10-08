@@ -5,6 +5,8 @@ type Coverage = components["schemas"]["CoverageResponse"];
 type CoverageFeature = components["schemas"]["CoverageFeature"];
 type Analysis = components["schemas"]["AnalysisResult"];
 type DataValue = components["schemas"]["DataValue"];
+type Trace = components["schemas"]["TraceResponse"];
+type TraceEvent = components["schemas"]["TraceEventView"];
 type RequestError = {
   error?: {
     code?: string;
@@ -101,6 +103,182 @@ function errorMessage(error: unknown): string {
     : "Ocurrió un error inesperado al consultar FireWatch.";
 }
 
+function isTerminalState(state: Analysis["state"]): boolean {
+  return state === "completed" || state === "partial" || state === "failed";
+}
+
+function mergeTrace(
+  current: Trace | null,
+  incoming: Trace,
+  analysisId: string,
+): Trace {
+  const events = new Map<string, TraceEvent>();
+  for (const event of current?.events ?? []) {
+    if (event.analysis_id === analysisId) {
+      events.set(`${event.analysis_id}:${event.sequence}`, event);
+    }
+  }
+  for (const event of incoming.events) {
+    if (event.analysis_id === analysisId) {
+      events.set(`${event.analysis_id}:${event.sequence}`, event);
+    }
+  }
+  return {
+    ...incoming,
+    events: [...events.values()].sort(
+      (left, right) =>
+        left.analysis_id.localeCompare(right.analysis_id) ||
+        left.sequence - right.sequence,
+    ),
+  };
+}
+
+function runStateLabel(state: Analysis["state"]): string {
+  return {
+    queued: "En cola",
+    running: "En curso",
+    completed: "Completado",
+    partial: "Parcial",
+    failed: "Error",
+  }[state];
+}
+
+function traceAvailabilityLabel(status: Trace["trace_status"]): string {
+  return {
+    not_yet_recorded: "Traza aún no registrada",
+    available: "Traza disponible",
+    incomplete: "Traza incompleta",
+    unavailable: "Traza no disponible",
+  }[status];
+}
+
+function traceActor(event: TraceEvent): string {
+  if (event.agent_role) {
+    const roles: Record<string, string> = {
+      contextualizer: "Contextualizador",
+      validator: "Validador",
+      explainer: "Explicador",
+    };
+    return roles[event.agent_role] ?? event.agent_role;
+  }
+  if (event.tool_name) return `Herramienta · ${event.tool_name}`;
+  return "Sistema";
+}
+
+function traceState(event: TraceEvent): string {
+  const states: Record<string, string> = {
+    started: "En curso",
+    completed: "Completada",
+    failed: "Fallida",
+    recorded: "Registrado",
+  };
+  if (event.event_type === "run_queued") return "En cola";
+  if (event.event_type === "run_started") return "En curso";
+  if (event.event_type === "run_completed") return "Completado";
+  if (event.event_type === "run_partial") return "Parcial";
+  if (event.event_type === "run_failed") return "Error";
+  if (event.event_type === "run_interrupted") return "Interrumpido";
+  if (event.event_type === "review_approved") return "Aprobada";
+  if (event.event_type === "review_revision_requested") return "Revisión solicitada";
+  if (event.event_type === "tool_failed") return "Fallida";
+  return states[event.status];
+}
+
+function TraceInspection({
+  trace,
+  traceError,
+  connection,
+}: {
+  trace: Trace | null;
+  traceError: string | null;
+  connection: "idle" | "connecting" | "connected" | "reconnecting";
+}) {
+  return (
+    <section className="trace-inspection" aria-labelledby="trace-title">
+      <details>
+        <summary>
+          <span id="trace-title">Traza real del análisis</span>
+          <span className="summary-meta">
+            {trace
+              ? `${traceAvailabilityLabel(trace.trace_status)} · ${runStateLabel(trace.run_state)}`
+              : "Cargando eventos persistidos"}
+          </span>
+        </summary>
+        <div className="detail-content">
+          <p className="trace-status" role="status" aria-live="polite">
+            {trace
+              ? `${traceAvailabilityLabel(trace.trace_status)}. Estado del run: ${runStateLabel(trace.run_state)}.`
+              : traceError
+                ? `Traza no disponible: ${traceError}`
+                : "Consultando únicamente eventos confirmados en el almacenamiento durable."}
+            {connection === "connecting" && " Conectando al stream."}
+            {connection === "reconnecting" &&
+              ` Conexión interrumpida; reconectando desde la secuencia ${trace?.latest_sequence ?? 0}.`}
+            {connection === "connected" && " Stream conectado."}
+            {traceError && ` Error al actualizar la traza: ${traceError}`}
+          </p>
+          {trace && trace.events.length === 0 ? (
+            <p>
+              {trace.trace_status === "unavailable"
+                ? "La traza no está disponible para este análisis."
+                : "La traza aún no está registrada."}
+            </p>
+          ) : trace?.events.length ? (
+            <div
+              className="table-scroll"
+              role="region"
+              aria-label="Eventos persistidos del análisis"
+              tabIndex={0}
+            >
+              <table className="data-list trace-list">
+                <thead>
+                  <tr>
+                    <th scope="col">Agente</th>
+                    <th scope="col">Tarea</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Resultado-Evidencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trace.events.map((event) => (
+                    <tr key={`${event.analysis_id}:${event.sequence}`}>
+                      <td>{traceActor(event)}</td>
+                      <td>{event.task ?? "Evento del run"}</td>
+                      <td>{traceState(event)}</td>
+                      <td>
+                        {event.result_summary ??
+                          (event.error_code
+                            ? `Error ${event.error_code}`
+                            : event.event_type)}
+                        {(event.affected_outputs ?? []).length > 0 && (
+                          <span className="trace-affected">
+                            {" "}
+                            · Afecta: {event.affected_outputs?.join(", ")}
+                          </span>
+                        )}
+                        {Object.entries(event.evidence).map(([reference, label]) => (
+                          <span className="trace-evidence" key={reference}>
+                            {label} · {reference}
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>
+              La traza todavía no está disponible para este análisis. No se
+              sustituye por actividad simulada.
+            </p>
+          )}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export default function App() {
   const [coverage, setCoverage] = useState<Coverage | null>(null);
   const [coverageError, setCoverageError] = useState<string | null>(null);
@@ -109,12 +287,35 @@ export default function App() {
   const [periodEnd, setPeriodEnd] = useState("");
   const [activeDate, setActiveDate] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [trace, setTrace] = useState<Trace | null>(null);
+  const [traceError, setTraceError] = useState<string | null>(null);
+  const [traceConnection, setTraceConnection] = useState<
+    "idle" | "connecting" | "connected" | "reconnecting"
+  >("idle");
   const [analysisState, setAnalysisState] = useState<
     "idle" | "running" | "complete" | "error"
   >("idle");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [loadingCoverage, setLoadingCoverage] = useState(true);
   const requestSequence = useRef(0);
+  const eventSource = useRef<EventSource | null>(null);
+  const cancelTraceStream = useRef<(() => void) | null>(null);
+
+  useEffect(
+    () => () => {
+      cancelTraceStream.current?.();
+      eventSource.current?.close();
+    },
+    [],
+  );
+
+  function closeTraceStream() {
+    requestSequence.current += 1;
+    cancelTraceStream.current?.();
+    eventSource.current?.close();
+    eventSource.current = null;
+    setTraceConnection("idle");
+  }
 
   async function loadCoverage() {
     setLoadingCoverage(true);
@@ -163,24 +364,37 @@ export default function App() {
     !loadingCoverage;
 
   function chooseLocation(nextWeatherId: string) {
+    closeTraceStream();
     setWeatherId(nextWeatherId);
+    setAnalysis(null);
+    setTrace(null);
+    setTraceError(null);
     setAnalysisError(null);
     setAnalysisState("idle");
   }
 
   function updatePeriodStart(value: string) {
+    closeTraceStream();
+    setAnalysis(null);
+    setTrace(null);
     setPeriodStart(value);
     setAnalysisError(null);
     setAnalysisState("idle");
   }
 
   function updatePeriodEnd(value: string) {
+    closeTraceStream();
+    setAnalysis(null);
+    setTrace(null);
     setPeriodEnd(value);
     setAnalysisError(null);
     setAnalysisState("idle");
   }
 
   function updateActiveDate(value: string) {
+    closeTraceStream();
+    setAnalysis(null);
+    setTrace(null);
     setActiveDate(value);
     setAnalysisError(null);
     setAnalysisState("idle");
@@ -204,6 +418,8 @@ export default function App() {
     const selectedDay = activeDate;
     const requestId = ++requestSequence.current;
     setAnalysis(null);
+    setTrace(null);
+    setTraceError(null);
     setAnalysisError(null);
     setAnalysisState("running");
 
@@ -220,31 +436,100 @@ export default function App() {
         analysis_id: string;
         state: "queued";
       }>(acceptedResponse);
-
-      for (let attempt = 0; attempt < 60; attempt += 1) {
-        const resultResponse = await fetch(
-          `/api/analyses/${encodeURIComponent(accepted.analysis_id)}`,
-        );
-        const result = await readJson<Analysis>(resultResponse);
-        if (result.state === "completed" || result.state === "partial") {
-          if (requestSequence.current === requestId) {
-            setAnalysis(result);
-            setAnalysisState("complete");
-          }
-          return;
-        }
-        if (result.state === "failed") {
-          throw new Error(
-            result.error_message ?? "El análisis no pudo completarse.",
-          );
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 500));
-      }
-      throw new Error(
-        "El análisis sigue en curso; vuelva a consultarlo en un momento.",
+      const traceUrl = `/api/analyses/${encodeURIComponent(accepted.analysis_id)}/trace`;
+      const initialTrace = await readJson<Trace>(await fetch(traceUrl));
+      if (requestSequence.current !== requestId) return;
+      setTrace(initialTrace);
+      const currentAnalysis = await readJson<Analysis>(
+        await fetch(`/api/analyses/${encodeURIComponent(accepted.analysis_id)}`),
       );
+      setAnalysis(currentAnalysis);
+      if (isTerminalState(initialTrace.run_state)) {
+        setAnalysis(currentAnalysis);
+        setAnalysisState("complete");
+        return;
+      }
+
+      const source = new EventSource(
+        `/api/analyses/${encodeURIComponent(accepted.analysis_id)}/trace/events`,
+      );
+      eventSource.current = source;
+      setTraceConnection("connecting");
+      await new Promise<void>((resolve, reject) => {
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          source.close();
+          if (eventSource.current === source) eventSource.current = null;
+          if (cancelTraceStream.current === finish) {
+            cancelTraceStream.current = null;
+          }
+          setTraceConnection("idle");
+          resolve();
+        };
+        cancelTraceStream.current = finish;
+        const refresh = async (event: MessageEvent<string>) => {
+          try {
+            const persisted = JSON.parse(event.data) as {
+              analysis_id: string;
+              sequence: number;
+              event_type: string;
+            };
+            if (persisted.analysis_id !== accepted.analysis_id) return;
+            const updatedTrace = await readJson<Trace>(await fetch(traceUrl));
+            if (requestSequence.current !== requestId) {
+              finish();
+              return;
+            }
+            setTrace((current) =>
+              mergeTrace(current, updatedTrace, persisted.analysis_id),
+            );
+            setTraceConnection("connected");
+            if (isTerminalState(updatedTrace.run_state)) {
+              const result = await readJson<Analysis>(
+                await fetch(
+                  `/api/analyses/${encodeURIComponent(accepted.analysis_id)}`,
+                ),
+              );
+              if (requestSequence.current === requestId) {
+                setAnalysis(result);
+                setAnalysisState("complete");
+              }
+              finish();
+            }
+          } catch (error) {
+            setTraceError(errorMessage(error));
+            finish();
+            reject(error);
+          }
+        };
+        const eventTypes = [
+          "run_queued",
+          "run_started",
+          "analysis_core_result_persisted",
+          "tool_failed",
+          "intervention_started",
+          "intervention_completed",
+          "intervention_failed",
+          "review_approved",
+          "review_revision_requested",
+          "run_interrupted",
+          "run_completed",
+          "run_partial",
+          "run_failed",
+        ];
+        for (const eventType of eventTypes) {
+          source.addEventListener(eventType, (event) => {
+            void refresh(event as MessageEvent<string>);
+          });
+        }
+        source.onopen = () => setTraceConnection("connected");
+        source.onerror = () => setTraceConnection("reconnecting");
+      });
     } catch (error) {
       if (requestSequence.current === requestId) {
+        closeTraceStream();
         setAnalysisError(errorMessage(error));
         setAnalysisState("error");
       }
@@ -450,6 +735,35 @@ export default function App() {
           </p>
         )}
 
+        {analysis && (
+          <TraceInspection
+            trace={trace}
+            traceError={traceError}
+            connection={traceConnection}
+          />
+        )}
+
+        {analysis && !result && isTerminalState(analysis.state) && (
+          <section
+            className="state-message error-message"
+            aria-labelledby="analysis-unavailable-title"
+          >
+            <h2 id="analysis-unavailable-title">
+              {analysis.state === "partial" ? "Análisis parcial" : "Análisis con error"}
+            </h2>
+            <p>
+              {analysis.error_message ??
+                "No hay un resultado determinístico disponible para este run."}
+            </p>
+            {analysis.error_code && <p>Código: {analysis.error_code}</p>}
+            {(analysis.affected_outputs ?? []).length > 0 && (
+              <p>
+                Tarea/salida afectada: {analysis.affected_outputs?.join(", ")}.
+              </p>
+            )}
+          </section>
+        )}
+
         {analysis && result && (
           <>
             <div className="selected-context result-context" aria-label="Contexto del resultado">
@@ -465,11 +779,22 @@ export default function App() {
               </span>
               <span className="status">
                 <span className="status-mark" aria-hidden="true" />
-                {analysis.state === "completed"
-                  ? "Completado · determinístico"
-                  : "Parcial · resultado determinístico"}
+                {runStateLabel(analysis.state)} · resultado determinístico
               </span>
             </div>
+            {analysis.state === "partial" && (
+              <p className="state-message trace-partial" role="status">
+                Análisis parcial: {analysis.error_message ?? "una rama del análisis no está disponible."}
+                {(analysis.affected_outputs ?? []).length > 0 && (
+                  <> Salida afectada: {analysis.affected_outputs?.join(", ")}.</>
+                )}
+              </p>
+            )}
+            {analysis.state === "failed" && (
+              <p className="state-message error-message" role="alert">
+                Análisis con error: {analysis.error_message ?? "no hay resultado disponible."}
+              </p>
+            )}
 
             <section className="result" aria-labelledby="result-title">
               <div className="result-head">
@@ -525,7 +850,7 @@ export default function App() {
                 </div>
 
                 <div className="summary">
-                  <p className="metric-label">Síntesis</p>
+                  <p className="metric-label">Comparación determinística</p>
                   <p>{summary}</p>
                 </div>
               </div>
@@ -550,6 +875,26 @@ export default function App() {
               </div>
 
               <div className="details-group">
+                {analysis.explanation && (
+                  <section className="section interpretation" aria-labelledby="interpretation-title">
+                    <div className="section-title">
+                      <h3 id="interpretation-title">Interpretación validada</h3>
+                      <span>Separada de observaciones y cálculos</span>
+                    </div>
+                    <p>{analysis.explanation}</p>
+                    {analysis.explanation_evidence_refs &&
+                      analysis.explanation_evidence_refs.length > 0 && (
+                        <ul className="source-list">
+                          {analysis.explanation_evidence_refs.map((reference) => (
+                            <li key={reference}>
+                              <code>{reference}</code>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </section>
+                )}
+
                 <details>
                   <summary>
                     Variables meteorológicas
@@ -664,6 +1009,7 @@ export default function App() {
                     </ul>
                   </div>
                 </details>
+
               </div>
             </section>
           </>

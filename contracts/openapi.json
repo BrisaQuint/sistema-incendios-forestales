@@ -118,6 +118,82 @@
           }
         }
       }
+    },
+    "/api/analyses/{analysis_id}/trace": {
+      "get": {
+        "summary": "Get Analysis Trace",
+        "operationId": "get_analysis_trace_api_analyses__analysis_id__trace_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyses/{analysis_id}/trace/events": {
+      "get": {
+        "summary": "Stream Analysis Trace",
+        "operationId": "stream_analysis_trace_api_analyses__analysis_id__trace_events_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -857,6 +933,229 @@
           "reference"
         ],
         "title": "SourceReference",
+        "type": "object"
+      },
+      "TraceEventView": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "event_type": {
+            "enum": [
+              "run_queued",
+              "run_started",
+              "analysis_core_result_persisted",
+              "tool_failed",
+              "intervention_started",
+              "intervention_completed",
+              "intervention_failed",
+              "review_approved",
+              "review_revision_requested",
+              "run_interrupted",
+              "run_completed",
+              "run_partial",
+              "run_failed"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "intervention_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intervention Id"
+          },
+          "agent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent Role"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Task"
+          },
+          "status": {
+            "enum": [
+              "started",
+              "completed",
+              "failed",
+              "recorded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "result_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result Summary"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool Name"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "affected_outputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Outputs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "sequence",
+          "event_type",
+          "occurred_at",
+          "status",
+          "evidence"
+        ],
+        "title": "TraceEventView",
+        "type": "object"
+      },
+      "TraceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "run_state": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "partial",
+              "failed"
+            ],
+            "title": "Run State",
+            "type": "string"
+          },
+          "trace_status": {
+            "enum": [
+              "not_yet_recorded",
+              "available",
+              "incomplete",
+              "unavailable"
+            ],
+            "title": "Trace Status",
+            "type": "string"
+          },
+          "earliest_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Sequence"
+          },
+          "latest_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Sequence"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TraceEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "run_state",
+          "trace_status",
+          "earliest_sequence",
+          "latest_sequence",
+          "events"
+        ],
+        "title": "TraceResponse",
         "type": "object"
       },
       "ValidationError": {

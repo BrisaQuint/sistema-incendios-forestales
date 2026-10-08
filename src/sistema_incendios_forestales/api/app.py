@@ -3,12 +3,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 import sqlite3
+import asyncio
 from typing import AsyncIterator
 from uuid import UUID, uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from sistema_incendios_forestales.api.config import (
     RuntimeConfigurationError,
@@ -23,6 +24,8 @@ from sistema_incendios_forestales.api.contracts import (
     CoverageResponse,
     ErrorResponse,
     ReadinessResponse,
+    TraceEventView,
+    TraceResponse,
 )
 from sistema_incendios_forestales.analysis import (
     AnalysisContextError,
@@ -271,6 +274,261 @@ async def get_analysis(analysis_id: str, request: Request) -> AnalysisResult:
             },
         )
     return result
+
+
+def _parse_analysis_id(analysis_id: str) -> UUID:
+    try:
+        return UUID(analysis_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "INVALID_ANALYSIS_ID",
+                "message": "analysis_id must be a UUID.",
+                "details": {},
+            },
+        ) from error
+
+
+def _trace_view(
+    parsed_analysis_id: UUID,
+    events,
+    analysis: AnalysisResult,
+) -> TraceResponse:
+    result = analysis.result
+    evidence_labels: dict[str, str] = {}
+    if result is not None:
+        source_labels = {
+            "weather_daily": "Datos meteorológicos y FWI observados del snapshot",
+            "monthly_fwi_reference": "Referencia histórica local-mensual",
+            "manifest": "Manifiesto y procedencia del snapshot",
+        }
+        for index, source_ref in enumerate(result.evidence_refs, start=1):
+            if ":weather_daily:" in source_ref:
+                source_type = "weather_daily"
+            elif ":monthly_fwi_reference:" in source_ref:
+                source_type = "monthly_fwi_reference"
+            else:
+                source_type = "manifest"
+            evidence_labels[
+                f"analysis:{parsed_analysis_id}:evidence:{index:03d}"
+            ] = source_labels[source_type]
+        if analysis.explanation:
+            for event in events:
+                if (
+                    event.event_type == "intervention_completed"
+                    and event.agent_role == "contextualizer"
+                    and event.output_ref
+                ):
+                    evidence_labels[event.output_ref] = (
+                        event.result_summary or "Contextualización registrada"
+                    )
+
+    views: list[TraceEventView] = []
+    for event in sorted(
+        { (event.analysis_id, event.sequence): event for event in events }.values(),
+        key=lambda item: (str(item.analysis_id), item.sequence),
+    ):
+        run_scoped_refs = list(
+            dict.fromkeys(
+                [
+                    *(event.input_evidence_refs or []),
+                    *(event.evidence_refs or []),
+                    *(event.issue_refs or []),
+                    *([event.output_ref] if event.output_ref else []),
+                ]
+            )
+        )
+        resolved = {
+            reference: evidence_labels[reference]
+            for reference in run_scoped_refs
+            if reference in evidence_labels
+            and reference.startswith(f"analysis:{parsed_analysis_id}:")
+        }
+        status_value = {
+            "intervention_started": "started",
+            "intervention_completed": "completed",
+            "intervention_failed": "failed",
+        }.get(event.event_type, "recorded")
+        views.append(
+            TraceEventView(
+                analysis_id=event.analysis_id,
+                sequence=event.sequence,
+                event_type=event.event_type,
+                occurred_at=event.occurred_at,
+                intervention_id=event.intervention_id,
+                agent_role=event.agent_role,
+                task=event.task,
+                status=status_value,
+                result_summary=event.result_summary,
+                evidence_refs=[
+                    reference
+                    for reference in run_scoped_refs
+                    if reference.startswith(f"analysis:{parsed_analysis_id}:")
+                ],
+                evidence=resolved,
+                tool_name=event.tool_name,
+                error_code=event.error_code,
+                affected_outputs=event.affected_outputs or [],
+            )
+        )
+    earliest, latest = (
+        (views[0].sequence, views[-1].sequence) if views else (None, None)
+    )
+    if not views:
+        trace_status = (
+            "unavailable"
+            if analysis.state in {"completed", "partial", "failed"}
+            else "not_yet_recorded"
+        )
+    elif analysis.state in {"queued", "running"}:
+        trace_status = "incomplete"
+    elif analysis.state in {"partial", "failed"}:
+        trace_status = "incomplete"
+    elif [view.sequence for view in views] != list(
+        range(views[0].sequence, views[-1].sequence + 1)
+    ) or views[0].sequence != 1:
+        trace_status = "incomplete"
+    else:
+        trace_status = "available"
+    return TraceResponse(
+        analysis_id=parsed_analysis_id,
+        run_state=analysis.state,
+        trace_status=trace_status,
+        earliest_sequence=earliest,
+        latest_sequence=latest,
+        events=views,
+    )
+
+
+@app.get(
+    "/api/analyses/{analysis_id}/trace",
+    response_model=TraceResponse,
+    name="get_analysis_trace",
+)
+async def get_analysis_trace(analysis_id: str, request: Request) -> TraceResponse:
+    parsed_id = _parse_analysis_id(analysis_id)
+    store: AuditStore = request.app.state.audit_store
+    analysis = store.get(parsed_id)
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "ANALYSIS_NOT_FOUND",
+                "message": "No analysis exists for this analysis_id.",
+                "details": {},
+            },
+        )
+    return _trace_view(parsed_id, store.events(parsed_id), analysis)
+
+
+def _parse_trace_cursor(value: str | None) -> int:
+    if value is None or value == "":
+        return 0
+    if not value.isascii() or not value.isdecimal():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_TRACE_CURSOR",
+                "message": "Last-Event-ID must be a non-negative sequence integer.",
+                "details": {},
+            },
+        )
+    return int(value)
+
+
+@app.get(
+    "/api/analyses/{analysis_id}/trace/events",
+    name="stream_analysis_trace",
+)
+async def stream_analysis_trace(
+    analysis_id: str,
+    request: Request,
+) -> StreamingResponse:
+    parsed_id = _parse_analysis_id(analysis_id)
+    store: AuditStore = request.app.state.audit_store
+    if store.get(parsed_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "ANALYSIS_NOT_FOUND",
+                "message": "No analysis exists for this analysis_id.",
+                "details": {},
+            },
+        )
+    cursor = _parse_trace_cursor(request.headers.get("last-event-id"))
+    earliest, latest = store.event_bounds(parsed_id)
+    if latest is not None and cursor > latest:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "TRACE_CURSOR_IN_FUTURE",
+                "message": "The requested trace cursor is newer than the durable trace.",
+                "details": {"latest_sequence": latest},
+            },
+        )
+    if earliest is not None and cursor < earliest - 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "TRACE_RESET_REQUIRED",
+                "message": "The requested cursor predates the retained durable trace.",
+                "details": {"earliest_sequence": earliest},
+            },
+        )
+
+    async def event_stream():
+        nonlocal cursor
+        while True:
+            if await request.is_disconnected():
+                return
+            persisted = store.events_after(parsed_id, cursor)
+            if persisted:
+                deduplicated = {
+                    (event.analysis_id, event.sequence): event for event in persisted
+                }
+                for (event_analysis_id, sequence), event in sorted(
+                    deduplicated.items(),
+                    key=lambda item: (str(item[0][0]), item[0][1]),
+                ):
+                    if event_analysis_id != parsed_id or sequence <= cursor:
+                        continue
+                    payload = event.model_dump_json()
+                    yield (
+                        f"id: {sequence}\n"
+                        f"event: {event.event_type}\n"
+                        f"data: {payload}\n\n"
+                    )
+                    cursor = sequence
+                run = store.get(parsed_id)
+                if run is not None and run.state in {
+                    "completed",
+                    "partial",
+                    "failed",
+                }:
+                    earliest_sequence, latest_sequence = store.event_bounds(parsed_id)
+                    if latest_sequence is not None and cursor >= latest_sequence:
+                        return
+            else:
+                run = store.get(parsed_id)
+                if run is not None and run.state in {
+                    "completed",
+                    "partial",
+                    "failed",
+                }:
+                    return
+                yield ": keep-alive\n\n"
+            await asyncio.sleep(0.25)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.get("/", include_in_schema=False)

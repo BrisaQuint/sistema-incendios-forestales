@@ -543,3 +543,21 @@ class AuditStore:
                 (str(analysis_id),),
             )
         ]
+
+    def events_after(self, analysis_id: UUID, sequence: int) -> list[TraceEvent]:
+        return [
+            TraceEvent.model_validate_json(row[0])
+            for row in self.connection.execute(
+                "SELECT event_json FROM analysis_events "
+                "WHERE analysis_id = ? AND sequence > ? ORDER BY sequence",
+                (str(analysis_id), sequence),
+            )
+        ]
+
+    def event_bounds(self, analysis_id: UUID) -> tuple[int | None, int | None]:
+        row = self.connection.execute(
+            "SELECT MIN(sequence), MAX(sequence) FROM analysis_events "
+            "WHERE analysis_id = ?",
+            (str(analysis_id),),
+        ).fetchone()
+        return row[0], row[1]

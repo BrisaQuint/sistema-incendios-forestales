@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analyses/{analysis_id}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analysis Trace */
+        get: operations["get_analysis_trace_api_analyses__analysis_id__trace_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analyses/{analysis_id}/trace/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream Analysis Trace */
+        get: operations["stream_analysis_trace_api_analyses__analysis_id__trace_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -336,6 +370,93 @@ export interface components {
             /** Reference */
             reference: string;
         };
+        /** TraceEventView */
+        TraceEventView: {
+            /**
+             * Analysis Id
+             * Format: uuid
+             */
+            analysis_id: string;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Event Type
+             * @enum {string}
+             */
+            event_type: "run_queued" | "run_started" | "analysis_core_result_persisted" | "tool_failed" | "intervention_started" | "intervention_completed" | "intervention_failed" | "review_approved" | "review_revision_requested" | "run_interrupted" | "run_completed" | "run_partial" | "run_failed";
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Intervention Id
+             * @default null
+             */
+            intervention_id: string | null;
+            /**
+             * Agent Role
+             * @default null
+             */
+            agent_role: string | null;
+            /**
+             * Task
+             * @default null
+             */
+            task: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "started" | "completed" | "failed" | "recorded";
+            /**
+             * Result Summary
+             * @default null
+             */
+            result_summary: string | null;
+            /** Evidence Refs */
+            evidence_refs?: string[];
+            /** Evidence */
+            evidence: {
+                [key: string]: string;
+            };
+            /**
+             * Tool Name
+             * @default null
+             */
+            tool_name: string | null;
+            /**
+             * Error Code
+             * @default null
+             */
+            error_code: string | null;
+            /** Affected Outputs */
+            affected_outputs?: string[];
+        };
+        /** TraceResponse */
+        TraceResponse: {
+            /**
+             * Analysis Id
+             * Format: uuid
+             */
+            analysis_id: string;
+            /**
+             * Run State
+             * @enum {string}
+             */
+            run_state: "queued" | "running" | "completed" | "partial" | "failed";
+            /**
+             * Trace Status
+             * @enum {string}
+             */
+            trace_status: "not_yet_recorded" | "available" | "incomplete" | "unavailable";
+            /** Earliest Sequence */
+            earliest_sequence: number | null;
+            /** Latest Sequence */
+            latest_sequence: number | null;
+            /** Events */
+            events: components["schemas"]["TraceEventView"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -566,6 +687,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalysisResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_trace_api_analyses__analysis_id__trace_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_analysis_trace_api_analyses__analysis_id__trace_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
