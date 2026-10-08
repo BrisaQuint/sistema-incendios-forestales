@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# datos para mantener raw fuera de git hub
+# Datos locales
+data/raw/*
+data/processed/*
+
+# Mantener estructura de carpetas
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Entorno y Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Variables de entorno
+.env
+# Frontend / Node
+node_modules/
