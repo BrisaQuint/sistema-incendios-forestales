@@ -31,6 +31,7 @@ from sistema_incendios_forestales.analysis import (
 )
 from sistema_incendios_forestales.audit import AuditStore
 from sistema_incendios_forestales.api.config import RuntimeSettings
+from sistema_incendios_forestales.llm import create_llm_provider
 from sistema_incendios_forestales.snapshot import SnapshotValidationError, validate_snapshot
 from sistema_incendios_forestales.snapshot import ValidatedSnapshot
 
@@ -60,6 +61,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     except SnapshotValidationError as error:
         raise RuntimeError(str(error)) from error
 
+    llm_provider = create_llm_provider(settings)
     try:
         audit_store = AuditStore.open(settings.audit_db_path)
     except (OSError, sqlite3.DatabaseError, RuntimeError):
@@ -69,6 +71,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.settings = settings
     application.state.snapshot = snapshot
     application.state.audit_store = audit_store
+    application.state.llm_provider = llm_provider
     try:
         yield
     finally:

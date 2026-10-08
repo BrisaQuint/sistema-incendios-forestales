@@ -19,6 +19,7 @@ from sistema_incendios_forestales.api.config import (
     load_settings,
 )
 from sistema_incendios_forestales.api.contracts import AnalysisRequest, TraceEvent
+from sistema_incendios_forestales.llm import MockLLM, OpenAIProvider
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +57,81 @@ def test_runtime_rejects_invalid_openai_provider_configuration(tmp_path: Path) -
         load_settings(environment)
 
     assert "OPENAI_API_KEY is required" in str(error.value)
+    assert "FIREWATCH_OPENAI_MODEL is required" in str(error.value)
     assert "FIREWATCH_LLM_TIMEOUT_SECONDS" in str(error.value)
+
+
+def test_runtime_requires_explicit_llm_provider(tmp_path: Path) -> None:
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    with pytest.raises(RuntimeConfigurationError, match="FIREWATCH_LLM_PROVIDER is required"):
+        load_settings(
+            {
+                "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+                "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+                "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+            }
+        )
+
+
+def test_runtime_loads_openai_configuration_without_exposing_the_key(
+    tmp_path: Path,
+) -> None:
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    api_key = "secret-test-value"
+    settings = load_settings(
+        {
+            "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+            "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+            "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+            "FIREWATCH_LLM_PROVIDER": "openai",
+            "OPENAI_API_KEY": api_key,
+            "FIREWATCH_OPENAI_MODEL": "test-model",
+            "FIREWATCH_LLM_TIMEOUT_SECONDS": "4.5",
+            "FIREWATCH_LLM_MAX_RETRIES": "2",
+            "FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN": "1200",
+        }
+    )
+
+    assert settings.llm_provider == "openai"
+    assert settings.openai_api_key == api_key
+    assert settings.openai_model == "test-model"
+    assert settings.llm_timeout_seconds == 4.5
+    assert settings.llm_max_retries == 2
+    assert settings.llm_max_output_tokens_per_run == 1200
+    assert api_key not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [
+        ("FIREWATCH_LLM_TIMEOUT_SECONDS", "0"),
+        ("FIREWATCH_LLM_TIMEOUT_SECONDS", "inf"),
+        ("FIREWATCH_LLM_MAX_RETRIES", "-1"),
+        ("FIREWATCH_LLM_MAX_RETRIES", "3"),
+        ("FIREWATCH_LLM_MAX_RETRIES", "1.5"),
+        ("FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN", "0"),
+        ("FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN", "1.5"),
+    ],
+)
+def test_runtime_rejects_invalid_openai_limits(
+    tmp_path: Path, variable: str, value: str
+) -> None:
+    manifest_sha256 = create_valid_snapshot(tmp_path)
+    settings = {
+        "FIREWATCH_SNAPSHOT_DIR": str(tmp_path),
+        "FIREWATCH_SNAPSHOT_VERSION": "1.0.0",
+        "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": manifest_sha256,
+        "FIREWATCH_LLM_PROVIDER": "openai",
+        "OPENAI_API_KEY": "secret-test-value",
+        "FIREWATCH_OPENAI_MODEL": "test-model",
+        "FIREWATCH_LLM_TIMEOUT_SECONDS": "5",
+        "FIREWATCH_LLM_MAX_RETRIES": "1",
+        "FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN": "900",
+    }
+    settings[variable] = value
+
+    with pytest.raises(RuntimeConfigurationError, match=variable):
+        load_settings(settings)
 
 
 def test_runtime_does_not_start_or_report_ready_without_required_bundle(
@@ -117,6 +192,31 @@ def test_runtime_accepts_explicit_mock_provider_and_complete_snapshot(
     assert settings.snapshot_version == "1.0.0"
     assert settings.llm_provider == "mock"
     assert settings.snapshot_dir == tmp_path.resolve()
+
+
+def test_runtime_installs_only_the_explicit_mock_provider(
+    ready_runtime: None,
+) -> None:
+    with TestClient(app):
+        assert isinstance(app.state.llm_provider, MockLLM)
+
+
+def test_runtime_installs_openai_only_when_explicitly_selected(
+    ready_runtime: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FIREWATCH_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "secret-test-value")
+    monkeypatch.setenv("FIREWATCH_OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("FIREWATCH_LLM_TIMEOUT_SECONDS", "2.5")
+    monkeypatch.setenv("FIREWATCH_LLM_MAX_RETRIES", "0")
+    monkeypatch.setenv("FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN", "400")
+
+    with TestClient(app):
+        provider = app.state.llm_provider
+        assert isinstance(provider, OpenAIProvider)
+        assert provider._client.max_retries == 0
+        assert provider._client.timeout == 2.5
 
 
 def test_analysis_request_has_only_canonical_id_and_local_date() -> None:

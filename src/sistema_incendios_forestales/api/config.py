@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
@@ -19,6 +19,11 @@ class RuntimeSettings:
     snapshot_manifest_sha256: str
     llm_provider: str
     audit_db_path: Path
+    openai_api_key: str | None = field(default=None, repr=False)
+    openai_model: str | None = None
+    llm_timeout_seconds: float | None = None
+    llm_max_retries: int | None = None
+    llm_max_output_tokens_per_run: int | None = None
 
 
 def load_settings(environ: Mapping[str, str] | None = None) -> RuntimeSettings:
@@ -48,38 +53,51 @@ def load_settings(environ: Mapping[str, str] | None = None) -> RuntimeSettings:
         else Path(__file__).resolve().parents[3] / "data" / "firewatch-audit.sqlite"
     )
 
-    llm_provider = values.get("FIREWATCH_LLM_PROVIDER", "openai").strip().lower()
+    llm_provider = values.get("FIREWATCH_LLM_PROVIDER", "").strip().lower()
+    openai_api_key: str | None = None
+    openai_model: str | None = None
+    llm_timeout: float | None = None
+    llm_retries: int | None = None
+    llm_max_tokens: int | None = None
+    if not llm_provider:
+        errors.append("FIREWATCH_LLM_PROVIDER is required and must be selected explicitly")
     if llm_provider not in {"openai", "mock"}:
         errors.append("FIREWATCH_LLM_PROVIDER must be 'openai' or explicitly 'mock'")
     elif llm_provider == "openai":
-        if not values.get("OPENAI_API_KEY", "").strip():
+        openai_api_key = values.get("OPENAI_API_KEY", "").strip()
+        if not openai_api_key:
             errors.append("OPENAI_API_KEY is required when the OpenAI provider is selected")
-        if not values.get("FIREWATCH_OPENAI_MODEL", "").strip():
+            openai_api_key = None
+        openai_model = values.get("FIREWATCH_OPENAI_MODEL", "").strip()
+        if not openai_model:
             errors.append("FIREWATCH_OPENAI_MODEL is required when the OpenAI provider is selected")
 
         timeout_value = values.get("FIREWATCH_LLM_TIMEOUT_SECONDS", "")
         try:
-            timeout = float(timeout_value)
-            if not math.isfinite(timeout) or timeout <= 0:
+            llm_timeout = float(timeout_value)
+            if not math.isfinite(llm_timeout) or llm_timeout <= 0:
                 raise ValueError
         except ValueError:
             errors.append("FIREWATCH_LLM_TIMEOUT_SECONDS must be a finite positive number")
+            llm_timeout = None
 
         retries_value = values.get("FIREWATCH_LLM_MAX_RETRIES", "")
         try:
-            retries = int(retries_value)
-            if not 0 <= retries <= 2:
+            llm_retries = int(retries_value)
+            if not 0 <= llm_retries <= 2:
                 raise ValueError
         except ValueError:
             errors.append("FIREWATCH_LLM_MAX_RETRIES must be an integer from 0 to 2")
+            llm_retries = None
 
         tokens_value = values.get("FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN", "")
         try:
-            max_tokens = int(tokens_value)
-            if max_tokens <= 0:
+            llm_max_tokens = int(tokens_value)
+            if llm_max_tokens <= 0:
                 raise ValueError
         except ValueError:
             errors.append("FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN must be a positive integer")
+            llm_max_tokens = None
 
     if errors:
         raise RuntimeConfigurationError(
@@ -92,4 +110,9 @@ def load_settings(environ: Mapping[str, str] | None = None) -> RuntimeSettings:
         snapshot_manifest_sha256=manifest_sha256.lower(),
         llm_provider=llm_provider,
         audit_db_path=audit_db_path,
+        openai_api_key=openai_api_key,
+        openai_model=openai_model,
+        llm_timeout_seconds=llm_timeout,
+        llm_max_retries=llm_retries,
+        llm_max_output_tokens_per_run=llm_max_tokens,
     )

@@ -31,7 +31,9 @@ El release builder crea una sola vez `manifest.json`, `data/scientific.sqlite`, 
 
 Configure `FIREWATCH_SNAPSHOT_DIR` con el directorio del release, `FIREWATCH_SNAPSHOT_VERSION=1.0.0` y el digest impreso. Antes de readiness, el runtime valida el schema/versiones del manifiesto, su digest configurado, tamaño/SHA-256 de cada payload, integridad/esquema SQLite, IDs y fechas diarios, referencias mensuales, geometrías EPSG:4326 y la correspondencia exacta entre SQLite y los 169 features. Abre SQLite con `mode=ro&immutable=1` y lo cierra al apagar. Si alguna verificación falla, el proceso no llega a readiness: no descarga ni repara datos, ni cambia o sustituye el bundle.
 
-El proveedor por defecto es OpenAI. Selecciónelo solo con `OPENAI_API_KEY`, `FIREWATCH_OPENAI_MODEL`, `FIREWATCH_LLM_TIMEOUT_SECONDS`, `FIREWATCH_LLM_MAX_RETRIES` (0–2) y `FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN` válidos. Para desarrollo sin llamadas externas, `FIREWATCH_LLM_PROVIDER=mock` debe seleccionarse explícitamente; nunca se usa como fallback.
+Seleccione explícitamente `FIREWATCH_LLM_PROVIDER=openai` y configure `OPENAI_API_KEY`, `FIREWATCH_OPENAI_MODEL`, `FIREWATCH_LLM_TIMEOUT_SECONDS` (finito/positivo), `FIREWATCH_LLM_MAX_RETRIES` (0–2) y `FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN` (entero positivo). El adaptador usa Structured Outputs con JSON Schema y valida localmente cada respuesta; clasifica errores sin respuesta de reserva y solo reintenta fallos transitorios. El SDK no realiza reintentos adicionales. Una instancia de `LLMRunBudget` limita conjuntamente las llamadas del análisis. Para desarrollo/tests, seleccione explícitamente `FIREWATCH_LLM_PROVIDER=mock` y configure respuestas mock para cada schema utilizado. No se usa MockLLM como fallback.
+
+El puerto `LLMProvider` mantiene el dominio desacoplado del SDK. Se conservan proveedor, modelo, versiones de prompt/schema e identificador/uso de la respuesta como metadatos permitidos; no se registran la clave, los prompts ni razonamiento oculto. Esta integración no calcula ni modifica FWI ni evidencia científica. La orquestación de roles sigue perteneciendo a Story 1.7 y la consulta de traza/SSE a Story 1.8.
 
 Con la configuración completa, el comando documentado de ejecución es:
 
@@ -47,11 +49,11 @@ La superficie principal obtiene `GET /api/coverage` y presenta el selector nativ
 
 La base de auditoría usa migraciones SQLite ordenadas y versionadas, aplicadas durante startup antes de readiness. Cada evento es inmutable, lleva secuencia consecutiva por run, timestamp UTC y clave idempotente. Las transiciones de estado y sus eventos se confirman atómicamente; `analysis_core_result_persisted` se compromete junto con el resultado científico antes de cualquier contextualización. Los fallos determinísticos registran `tool_failed` con tarea/error/salida afectados y terminan en `failed` cuando no hay FWI utilizable. Al reiniciar, los runs `queued`/`running` sin terminal se cierran con `run_interrupted` más `run_failed` o `run_partial` según exista FWI central persistido; el runtime no repite el trabajo interrumpido.
 
-Story 1.5 no invoca OpenAI ni ejecuta roles MAS. La configuración existente sigue seleccionando `mock` explícitamente para desarrollo/pruebas o exige configuración OpenAI completa; no hay fallback automático. El adaptador estructurado, sus timeouts/reintentos y traducción de fallos pertenecen a Story 1.6; la orquestación MAS a 1.7 y la consulta de traza/SSE a 1.8. El cálculo FWI y la evidencia científica permanecen determinísticos.
+Story 1.6 conecta el puerto OpenAI estructurado, pero aún no ejecuta roles MAS; esa orquestación pertenece a Story 1.7 y la consulta de traza/SSE a 1.8. El cálculo FWI y la evidencia científica permanecen determinísticos.
 
-### Pruebas focalizadas de Stories 1.1–1.5
+### Pruebas focalizadas de Stories 1.1–1.6
 
 ```powershell
-uv run pytest tests/test_audit_store.py tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
+uv run pytest tests/test_audit_store.py tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py tests/test_llm_provider.py
 npm --prefix frontend run build
 ```
