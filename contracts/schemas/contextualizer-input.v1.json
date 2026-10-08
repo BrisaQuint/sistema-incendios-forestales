@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/contextualizer-input.v1.json",
+  "title": "Contextualizer input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "analysis_id", "evidence_bundle", "revision_number", "revision_feedback", "previous_contextualization"],
+  "properties": {
+    "schema_version": { "const": "contextualizer-input.v1" },
+    "analysis_id": { "type": "string", "format": "uuid" },
+    "evidence_bundle": { "$ref": "evidence-bundle.v1.json" },
+    "revision_number": { "type": "integer", "minimum": 0, "maximum": 1 },
+    "revision_feedback": { "type": "array", "items": { "type": "string" } },
+    "previous_contextualization": {
+      "anyOf": [
+        { "$ref": "contextualizer-output.v1.json" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/evidence-bundle.v1.json",
+  "title": "FireWatch run-scoped evidence bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "analysis_id", "evidence"],
+  "properties": {
+    "schema_version": { "const": "evidence-bundle.v1" },
+    "analysis_id": { "type": "string", "format": "uuid" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "evidence_type", "source_ref", "payload"],
+        "properties": {
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "evidence_type": {
+            "enum": ["weather_daily", "monthly_fwi_reference", "snapshot_manifest", "contextualization"]
+          },
+          "source_ref": { "type": ["string", "null"] },
+          "payload": { "type": "object" }
+        }
+      }
+    }
+  }
+}

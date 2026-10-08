@@ -129,6 +129,22 @@ export interface components {
              * @default null
              */
             error_message: string | null;
+            /**
+             * Explanation
+             * @default null
+             */
+            explanation: string | null;
+            /**
+             * Explanation Evidence Refs
+             * @default null
+             */
+            explanation_evidence_refs: string[] | null;
+            /** Provider Metadata */
+            provider_metadata?: {
+                [key: string]: string | number | null;
+            }[];
+            /** Affected Outputs */
+            affected_outputs?: string[];
         };
         /** Coordinates */
         Coordinates: {

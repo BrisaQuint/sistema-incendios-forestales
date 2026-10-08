@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-08-2026 01:02
-last_updated: 10-08-2026 02:47
+last_updated: 10-08-2026 03:15
 project: sistema-incendios-forestales
 project_key: NOKEY
 tracking_system: file-system
@@ -42,7 +42,7 @@ development_status:
   1-4-seleccionar-contexto-y-ver-el-resultado-contextualizado: done
   1-5-persistir-el-estado-y-los-eventos-reales-de-un-análisis: done
   1-6-conectar-el-proveedor-openai-con-salida-estructurada: done
-  1-7-ejecutar-la-colaboración-mas-determinística-y-trazable: backlog
+  1-7-ejecutar-la-colaboración-mas-determinística-y-trazable: done
   1-8-inspeccionar-explicación-y-traza-real-con-sse: backlog
   1-9-verificar-el-recorrido-mvp-con-snapshot-y-openai-reales: backlog
   epic-1-retrospective: optional

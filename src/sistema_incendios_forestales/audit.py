@@ -316,6 +316,7 @@ class AuditStore:
         result: AnalysisResult | None = None,
         error_code: str | None = None,
         error_message: str | None = None,
+        affected_outputs: list[str] | None = None,
         interrupted: bool = False,
     ) -> None:
         result_ref = f"analysis:{analysis_id}:deterministic-result"
@@ -356,9 +357,12 @@ class AuditStore:
                 event_type,
                 result_ref=result_ref if state in {"completed", "partial"} else None,
                 error_code=error_code,
-                affected_outputs=["deterministic_result"]
-                if state in {"completed", "partial"}
-                else ["deterministic_result", "analysis"],
+                affected_outputs=affected_outputs
+                or (
+                    ["deterministic_result"]
+                    if state in {"completed", "partial"}
+                    else ["deterministic_result", "analysis"]
+                ),
             )
             self.connection.execute(
                 "UPDATE analysis_runs SET state = ?, result_json = ?, error_code = ?, "
@@ -400,6 +404,7 @@ class AuditStore:
         self,
         analysis_id: UUID,
         build_result: Callable[[], AnalysisResult],
+        collaborate: Callable[[AnalysisResult], AnalysisResult] | None = None,
     ) -> None:
         self._mark_started(analysis_id)
         try:
@@ -426,7 +431,17 @@ class AuditStore:
             )
             return
         self._persist_core_result(analysis_id, result)
-        self._finish(analysis_id, "completed", result=result)
+        if collaborate is not None:
+            result = collaborate(result)
+        state = "partial" if result.state == "partial" else "completed"
+        self._finish(
+            analysis_id,
+            state,
+            result=result,
+            error_code=result.error_code if state == "partial" else None,
+            error_message=result.error_message if state == "partial" else None,
+            affected_outputs=result.affected_outputs if state == "partial" else None,
+        )
 
     def recover_interrupted_runs(self) -> None:
         rows = self.connection.execute(

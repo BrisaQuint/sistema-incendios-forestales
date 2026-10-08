@@ -182,6 +182,10 @@ class AnalysisResult(ContractModel):
     result: DeterministicResult | None
     error_code: str | None = None
     error_message: str | None = None
+    explanation: str | None = None
+    explanation_evidence_refs: list[str] | None = None
+    provider_metadata: list[dict[str, str | int | None]] = Field(default_factory=list)
+    affected_outputs: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def require_result_for_success(self) -> AnalysisResult:

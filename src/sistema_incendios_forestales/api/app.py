@@ -31,7 +31,11 @@ from sistema_incendios_forestales.analysis import (
 )
 from sistema_incendios_forestales.audit import AuditStore
 from sistema_incendios_forestales.api.config import RuntimeSettings
-from sistema_incendios_forestales.llm import create_llm_provider
+from sistema_incendios_forestales.llm import LLMProvider, create_llm_provider
+from sistema_incendios_forestales.mas import (
+    DeterministicMASOrchestrator,
+    MASExecutionError,
+)
 from sistema_incendios_forestales.snapshot import SnapshotValidationError, validate_snapshot
 from sistema_incendios_forestales.snapshot import ValidatedSnapshot
 
@@ -167,9 +171,36 @@ async def _execute_analysis(
     audit_store: AuditStore,
     snapshot: ValidatedSnapshot,
     settings: RuntimeSettings,
+    llm_provider: LLMProvider,
     analysis_id: UUID,
     analysis_request: AnalysisRequest,
 ) -> None:
+    def collaborate(result: AnalysisResult) -> AnalysisResult:
+        token_budget = settings.llm_max_output_tokens_per_run or 10_000
+        orchestrator = DeterministicMASOrchestrator(
+            provider=llm_provider,
+            audit_store=audit_store,
+            token_budget=token_budget,
+        )
+        try:
+            return orchestrator.run(result)
+        except MASExecutionError as error:
+            return result.model_copy(
+                update={
+                    "state": "partial",
+                    "error_code": error.code,
+                    "error_message": str(error),
+                    "affected_outputs": error.affected_outputs,
+                    "provider_metadata": error.provider_metadata
+                    or [
+                        {
+                            "provider": settings.llm_provider,
+                            "model": settings.openai_model or "explicit-mock",
+                        }
+                    ],
+                }
+            )
+
     audit_store.execute(
         analysis_id,
         lambda: build_deterministic_result(
@@ -178,6 +209,7 @@ async def _execute_analysis(
             analysis_id,
             settings.snapshot_manifest_sha256,
         ),
+        collaborate=collaborate,
     )
 
 
@@ -208,6 +240,7 @@ async def create_analysis(
         audit_store,
         snapshot,
         request.app.state.settings,
+        request.app.state.llm_provider,
         analysis_id,
         analysis_request,
     )

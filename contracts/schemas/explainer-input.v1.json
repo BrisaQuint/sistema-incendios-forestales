@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/explainer-input.v1.json",
+  "title": "Explainer input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "analysis_id", "evidence_bundle", "contextualization", "validation"],
+  "properties": {
+    "schema_version": { "const": "explainer-input.v1" },
+    "analysis_id": { "type": "string", "format": "uuid" },
+    "evidence_bundle": { "$ref": "evidence-bundle.v1.json" },
+    "contextualization": { "$ref": "contextualizer-output.v1.json" },
+    "validation": { "$ref": "validator-output.v1.json" }
+  }
+}

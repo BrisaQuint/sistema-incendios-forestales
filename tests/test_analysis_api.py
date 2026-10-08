@@ -13,6 +13,7 @@ from conftest import create_valid_snapshot
 from sistema_incendios_forestales.analysis import build_deterministic_result
 from sistema_incendios_forestales.api.app import app
 from sistema_incendios_forestales.api.contracts import AnalysisRequest, DataValue
+from test_mas_orchestrator import ScriptedProvider
 
 
 @pytest.fixture
@@ -57,7 +58,9 @@ def test_coverage_exposes_all_canonical_features_and_snapshot_provenance(
 def test_deterministic_analysis_is_accepted_and_result_and_events_persist_atomically(
     configured_analysis_runtime: Path,
 ) -> None:
+    provider = ScriptedProvider()
     with TestClient(app) as client:
+        app.state.llm_provider = provider
         coverage = client.get("/api/coverage").json()
         weather_id = coverage["features"][0]["properties"]["weather_id"]
         accepted = client.post(
@@ -72,6 +75,7 @@ def test_deterministic_analysis_is_accepted_and_result_and_events_persist_atomic
     assert response.status_code == 200
     analysis = response.json()
     assert analysis["state"] == "completed"
+    assert analysis["explanation"]
     assert analysis["weather_id"] == weather_id
     assert analysis["date"] == "2021-01-01"
     result = analysis["result"]
@@ -106,9 +110,16 @@ def test_deterministic_analysis_is_accepted_and_result_and_events_persist_atomic
         "run_queued",
         "run_started",
         "analysis_core_result_persisted",
+        "intervention_started",
+        "intervention_completed",
+        "intervention_started",
+        "intervention_completed",
+        "review_approved",
+        "intervention_started",
+        "intervention_completed",
         "run_completed",
     ]
-    assert [row[0] for row in events] == [1, 2, 3, 4]
+    assert [row[0] for row in events] == list(range(1, 12))
     assert all(json.loads(row[2])["analysis_id"] == analysis_id for row in events)
 
 

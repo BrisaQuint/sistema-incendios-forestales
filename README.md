@@ -33,7 +33,7 @@ Configure `FIREWATCH_SNAPSHOT_DIR` con el directorio del release, `FIREWATCH_SNA
 
 Seleccione explícitamente `FIREWATCH_LLM_PROVIDER=openai` y configure `OPENAI_API_KEY`, `FIREWATCH_OPENAI_MODEL`, `FIREWATCH_LLM_TIMEOUT_SECONDS` (finito/positivo), `FIREWATCH_LLM_MAX_RETRIES` (0–2) y `FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN` (entero positivo). El adaptador usa Structured Outputs con JSON Schema y valida localmente cada respuesta; clasifica errores sin respuesta de reserva y solo reintenta fallos transitorios. El SDK no realiza reintentos adicionales. Una instancia de `LLMRunBudget` limita conjuntamente las llamadas del análisis. Para desarrollo/tests, seleccione explícitamente `FIREWATCH_LLM_PROVIDER=mock` y configure respuestas mock para cada schema utilizado. No se usa MockLLM como fallback.
 
-El puerto `LLMProvider` mantiene el dominio desacoplado del SDK. Se conservan proveedor, modelo, versiones de prompt/schema e identificador/uso de la respuesta como metadatos permitidos; no se registran la clave, los prompts ni razonamiento oculto. Esta integración no calcula ni modifica FWI ni evidencia científica. La orquestación de roles sigue perteneciendo a Story 1.7 y la consulta de traza/SSE a Story 1.8.
+El puerto `LLMProvider` mantiene el dominio desacoplado del SDK. Se conservan proveedor, modelo, versiones de prompt/schema e identificador/uso de la respuesta como metadatos permitidos; no se registran la clave, los prompts ni razonamiento oculto. Esta integración no calcula ni modifica FWI ni evidencia científica.
 
 Con la configuración completa, el comando documentado de ejecución es:
 
@@ -49,11 +49,11 @@ La superficie principal obtiene `GET /api/coverage` y presenta el selector nativ
 
 La base de auditoría usa migraciones SQLite ordenadas y versionadas, aplicadas durante startup antes de readiness. Cada evento es inmutable, lleva secuencia consecutiva por run, timestamp UTC y clave idempotente. Las transiciones de estado y sus eventos se confirman atómicamente; `analysis_core_result_persisted` se compromete junto con el resultado científico antes de cualquier contextualización. Los fallos determinísticos registran `tool_failed` con tarea/error/salida afectados y terminan en `failed` cuando no hay FWI utilizable. Al reiniciar, los runs `queued`/`running` sin terminal se cierran con `run_interrupted` más `run_failed` o `run_partial` según exista FWI central persistido; el runtime no repite el trabajo interrumpido.
 
-Story 1.6 conecta el puerto OpenAI estructurado, pero aún no ejecuta roles MAS; esa orquestación pertenece a Story 1.7 y la consulta de traza/SSE a 1.8. El cálculo FWI y la evidencia científica permanecen determinísticos.
+Story 1.7 ejecuta una state machine Python fija: contextualizador → validador → explicador, con como máximo una nueva intervención de contextualización si el validador solicita revisión. Solo un resultado aprobado llega al explicador; un segundo rechazo o cualquier fallo de rol termina `partial` y conserva el FWI, sin una explicación no aprobada. Los siete schemas versionados `evidence-bundle.v1` y de entradas/salidas de los tres roles están en `contracts/schemas/`. Las referencias de evidencia se reescriben como IDs de alcance por análisis, se validan contra el registro del run y no pueden resolver a otro `analysis_id`. Cada llamada genera eventos persistidos de inicio y terminal con ID de intervención, rol, tarea y referencias. Los roles reciben únicamente JSON explícito, sin herramientas ni acceso a SQL, filesystem o APIs. Las respuestas interpretativas no pueden introducir cantidades numéricas ni cambiar el cálculo/evidencia determinísticos. La API incluye explicación aprobada y referencias solo tras completar el flujo; la interfaz de traza y SSE queda para Story 1.8.
 
-### Pruebas focalizadas de Stories 1.1–1.6
+### Pruebas focalizadas de Stories 1.1–1.7
 
 ```powershell
-uv run pytest tests/test_audit_store.py tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py tests/test_llm_provider.py
+uv run pytest tests/test_audit_store.py tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py tests/test_llm_provider.py tests/test_mas_orchestrator.py
 npm --prefix frontend run build
 ```

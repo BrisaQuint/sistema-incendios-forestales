@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/explainer-output.v1.json",
+  "title": "Explainer output v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "explanation", "evidence_refs"],
+  "properties": {
+    "schema_version": { "const": "explainer-output.v1" },
+    "explanation": { "type": "string", "minLength": 1 },
+    "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+  }
+}

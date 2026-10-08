@@ -225,6 +225,60 @@
             ],
             "default": null,
             "title": "Error Message"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Explanation"
+          },
+          "explanation_evidence_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Explanation Evidence Refs"
+          },
+          "provider_metadata": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Provider Metadata",
+            "type": "array"
+          },
+          "affected_outputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Outputs",
+            "type": "array"
           }
         },
         "required": [
