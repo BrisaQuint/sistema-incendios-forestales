@@ -237,3 +237,4 @@ __pycache__/
 .env
 # Frontend / Node
 node_modules/
+frontend/dist/
