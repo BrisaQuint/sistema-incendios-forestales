@@ -45,11 +45,13 @@ La superficie principal obtiene `GET /api/coverage` y presenta el selector nativ
 
 `POST /api/analyses` recibe `{ "weather_id": "...", "date": "YYYY-MM-DD" }` y responde `202` con el `analysis_id`; `GET /api/analyses/{analysis_id}` permite consultar el estado y resultado diario. El resultado incluye meteorología, componentes FWI, referencia mediana de la misma ubicación y mes, diferencia descriptiva, cantidad `firms_count` y referencias reales al snapshot/manifest. Cero FIRMS asociado no significa ausencia de incendio. Las ausencias se expresan como `null` con motivo, nunca como cero. FWI se rotula como peligro meteorológico, no probabilidad; la síntesis describe la comparación sin categorías locales de peligro.
 
-La primera implementación persiste `run_queued`, `run_started`, `analysis_core_result_persisted` y el evento terminal junto con la proyección del resultado; no crea eventos de agente. La transacción de finalización confirma conjuntamente resultado/proyección y eventos de inicio, resultado central y terminal.
+La base de auditoría usa migraciones SQLite ordenadas y versionadas, aplicadas durante startup antes de readiness. Cada evento es inmutable, lleva secuencia consecutiva por run, timestamp UTC y clave idempotente. Las transiciones de estado y sus eventos se confirman atómicamente; `analysis_core_result_persisted` se compromete junto con el resultado científico antes de cualquier contextualización. Los fallos determinísticos registran `tool_failed` con tarea/error/salida afectados y terminan en `failed` cuando no hay FWI utilizable. Al reiniciar, los runs `queued`/`running` sin terminal se cierran con `run_interrupted` más `run_failed` o `run_partial` según exista FWI central persistido; el runtime no repite el trabajo interrumpido.
 
-### Pruebas focalizadas de Stories 1.1–1.3
+Story 1.5 no invoca OpenAI ni ejecuta roles MAS. La configuración existente sigue seleccionando `mock` explícitamente para desarrollo/pruebas o exige configuración OpenAI completa; no hay fallback automático. El adaptador estructurado, sus timeouts/reintentos y traducción de fallos pertenecen a Story 1.6; la orquestación MAS a 1.7 y la consulta de traza/SSE a 1.8. El cálculo FWI y la evidencia científica permanecen determinísticos.
+
+### Pruebas focalizadas de Stories 1.1–1.5
 
 ```powershell
-uv run pytest tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
+uv run pytest tests/test_audit_store.py tests/test_analysis_api.py tests/test_runtime_contracts.py tests/test_snapshot_bundle.py
 npm --prefix frontend run build
 ```
