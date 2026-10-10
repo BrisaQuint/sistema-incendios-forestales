@@ -1120,15 +1120,25 @@ export default function App() {
                           : "Detecciones FIRMS asociadas"}
                       </strong>
                       {displayValue(result.firms_count)}{" "}
-                      {result.firms_count.unit ?? ""}. FIRMS type=0 significa
-                      presumed vegetation fire. Una detección térmica no
+                      {result.firms_count.unit ?? ""}. Clasificación satelital
+                      FIRMS type=0: «Posible incendio de vegetación». Esta
+                      clasificación no constituye una confirmación de incendio.
+                      Una detección térmica no
                       confirma por sí sola un incendio individual; la ausencia
                       de detecciones asociadas no demuestra ausencia de
                       incendio.
                     </div>
                     <p className="subline">
-                      La asociación con el FWI de las 12:00 local del mismo día
-                      es histórica y descriptiva, no predictiva. Una detección
+                      Fecha local del contexto asociado: {analysis.date}.
+                      {" "}Ubicación asociada (weather_id): {analysis.weather_id}.
+                    </p>
+                    <p className="subline">
+                      Distancia individual de detección: no disponible en este
+                      snapshot.
+                    </p>
+                    <p className="subline">
+                      La asociación con el FWI de las 12:00 locales del mismo día
+                      es histórica y descriptiva, no causal ni predictiva. Una detección
                       anterior a las 12:00 puede quedar asociada a condiciones
                       meteorológicas posteriores dentro de ese día.
                     </p>
