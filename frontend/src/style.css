@@ -269,6 +269,7 @@ h1 {
 }
 
 .text-button {
+  min-height: 24px;
   border: 0;
   padding: 2px;
   background: transparent;
@@ -364,6 +365,21 @@ h1 {
   vertical-align: top;
 }
 
+.analysis-announcement:not(:empty) {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-left: 4px solid #286f85;
+  background: #eaf0ed;
+}
+
+.analysis-announcement:empty { margin: 0; }
+
+.data-list th[scope="row"] {
+  color: #182522;
+  font-size: 13px;
+  vertical-align: top;
+}
+
 .trace-evidence {
   display: block;
   margin-top: 4px;
@@ -386,7 +402,6 @@ h1 {
 }
 
 .result {
-  overflow: hidden;
   border: 1px solid #778a84;
   border-radius: 8px;
   background: #fff;
@@ -474,6 +489,7 @@ h2 {
 
 .compare-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
@@ -786,7 +802,18 @@ details[open] > summary::before {
 
   .day-navigation {
     margin-left: 0;
+    flex-wrap: wrap;
   }
+
+  .metric-row,
+  .section-title,
+  summary {
+    flex-wrap: wrap;
+  }
+
+  .field { min-width: 0; }
+
+  .summary-meta { margin-left: 0; }
 
   .footer-note {
     padding-right: 16px;

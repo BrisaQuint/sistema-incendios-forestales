@@ -346,8 +346,9 @@ function TraceInspection({
               <thead>
                 <tr>
                   <th scope="col">Agente</th>
+                  <th scope="col">Tarea</th>
                   <th scope="col">Estado</th>
-                  <th scope="col">Resultado</th>
+                  <th scope="col">Resultado / Evidencia</th>
                 </tr>
               </thead>
               <tbody>
@@ -357,12 +358,22 @@ function TraceInspection({
                     role,
                     trace.run_state,
                   );
+                  const roleEvents = trace.events.filter((event) => event.agent_role === role);
+                  const task = [...roleEvents].reverse().find((event) => event.task)?.task;
+                  const evidenceRefs = [...new Set(roleEvents.flatMap((event) => event.evidence_refs ?? []))];
 
                   return (
                     <tr key={role}>
-                      <td>{label}</td>
+                      <th scope="row">{label}</th>
+                      <td>{task ?? "Sin tarea registrada"}</td>
                       <td>{summary.state}</td>
-                      <td>{summary.result}</td>
+                      <td>{summary.result}
+                        {evidenceRefs.length > 0 ? (
+                          <ul className="source-list">{evidenceRefs.map((reference) => (
+                            <li key={reference}><code>{reference}</code></li>
+                          ))}</ul>
+                        ) : <span className="trace-evidence">Sin referencias de evidencia registradas.</span>}
+                      </td>
                     </tr>
                   );
                 })}
@@ -532,6 +543,8 @@ export default function App() {
     activeDateIsValid &&
     analysisState !== "running" &&
     !loadingCoverage;
+  const periodError = Boolean(selectedFeature && periodStart && periodEnd && !periodIsValid);
+  const dayError = Boolean(selectedFeature && activeDate && !activeDateIsValid);
 
   function chooseLocation(nextWeatherId: string) {
     closeTraceStream();
@@ -707,6 +720,13 @@ export default function App() {
   }
 
   const result = analysis?.result;
+  const analysisAnnouncement = analysisState === "error"
+    ? `Error de análisis. ${analysisError ?? "No se pudo completar la consulta."}`
+    : analysisState === "running"
+      ? "Análisis en curso. Se conserva el contexto seleccionado."
+      : analysis && isTerminalState(analysis.state)
+        ? `Análisis ${runStateLabel(analysis.state).toLowerCase()} para ${analysis.weather_id}, fecha ${analysis.date}. ${analysis.state !== "completed" ? analysis.error_message ?? "" : "Resultado disponible."}`
+        : "";
   const resultFeature =
     analysis === null
       ? null
@@ -761,6 +781,8 @@ export default function App() {
               onChange={(event) => chooseLocation(event.target.value)}
               disabled={loadingCoverage || !coverage}
               required
+              aria-describedby="coverage-help"
+              aria-invalid={Boolean(coverageError) || undefined}
             >
               <option value="">Seleccionar ubicación o sector</option>
               {coverage?.features.map((feature) => (
@@ -782,6 +804,8 @@ export default function App() {
             <label htmlFor="period-start">Inicio del período disponible</label>
             <input
               id="period-start"
+              aria-describedby="coverage-help"
+              aria-invalid={periodError || undefined}
               type="date"
               value={periodStart}
               min={dateRange?.start}
@@ -796,6 +820,8 @@ export default function App() {
             <label htmlFor="period-end">Fin del período disponible</label>
             <input
               id="period-end"
+              aria-describedby="coverage-help"
+              aria-invalid={periodError || undefined}
               type="date"
               value={periodEnd}
               min={dateRange?.start}
@@ -817,7 +843,8 @@ export default function App() {
               onChange={(event) => updateActiveDate(event.target.value)}
               disabled={!selectedFeature}
               required
-              aria-describedby="date-help"
+              aria-describedby="date-help coverage-help"
+              aria-invalid={dayError || undefined}
             />
             <small id="date-help">
               Cada ejecución consulta un solo día del período.
@@ -829,7 +856,7 @@ export default function App() {
           </button>
         </form>
 
-        <p className="coverage-help" role="status" aria-live="polite">
+        <p id="coverage-help" className="coverage-help" role="status" aria-live="polite">
           {loadingCoverage
             ? "Cargando cobertura y fechas disponibles…"
             : coverageError
@@ -885,23 +912,14 @@ export default function App() {
           </section>
         )}
 
-        {analysisState === "running" && (
-          <p className="state-message" role="status" aria-live="polite">
-            Consultando resultado determinístico para {weatherId} · {activeDate}.
-            El contexto seleccionado se mantiene visible.
-          </p>
-        )}
+        <p className="analysis-announcement" role="status" aria-live="polite" aria-atomic="true">
+          {analysisAnnouncement}
+        </p>
         {analysisError && (
-          <p className="state-message error-message" role="alert">
+          <p className="state-message error-message">
             No se pudo completar la consulta para {weatherId} · {activeDate}:{" "}
             {analysisError} Se conserva la ubicación y fecha seleccionadas;
             puede corregir el contexto e intentar de nuevo.
-          </p>
-        )}
-        {coverageError && (
-          <p className="state-message error-message" role="alert">
-            No hay resultados de cobertura disponibles hasta que el servicio
-            responda correctamente.
           </p>
         )}
 
@@ -964,7 +982,7 @@ export default function App() {
               </span>
             </div>
             {analysis.state === "partial" && (
-              <p className="state-message trace-partial" role="status">
+              <p className="state-message trace-partial">
                 Análisis parcial: {analysis.error_message ?? "una rama del análisis no está disponible."}
                 {(analysis.affected_outputs ?? []).length > 0 && (
                   <> Salida afectada: {analysis.affected_outputs?.join(", ")}.</>
@@ -972,7 +990,7 @@ export default function App() {
               </p>
             )}
             {analysis.state === "failed" && (
-              <p className="state-message error-message" role="alert">
+              <p className="state-message error-message">
                 Análisis con error: {analysis.error_message ?? "no hay resultado disponible."}
               </p>
             )}
@@ -1096,7 +1114,7 @@ export default function App() {
                             const value = result.meteorology[key];
                             return (
                               <tr key={key}>
-                                <td>{label}</td>
+                                <th scope="row">{label}</th>
                                 <td>
                                   {displayValue(value)} {value.unit ?? ""}
                                 </td>
