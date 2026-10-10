@@ -10,6 +10,9 @@ from fastapi.testclient import TestClient
 from conftest import create_valid_snapshot
 from sistema_incendios_forestales.api.app import app
 from test_mas_orchestrator import ScriptedProvider
+from sistema_incendios_forestales.api.contracts import AnalysisRequest
+from sistema_incendios_forestales.analysis import build_deterministic_result
+from uuid import uuid4
 
 
 @pytest.fixture
@@ -44,6 +47,38 @@ def completed_analysis(
     )
     assert accepted.status_code == 202
     return accepted.json()["analysis_id"], provider
+
+
+@pytest.mark.parametrize("persist_core", [False, True])
+def test_restart_then_resume_cursor_without_provider_calls(trace_runtime, persist_core):
+    analysis_id = uuid4()
+    with TestClient(app) as client:
+        snapshot = app.state.snapshot
+        request = AnalysisRequest(weather_id=snapshot.coverage["features"][0]["properties"]["weather_id"], date="2021-01-01")
+        store = app.state.audit_store
+        async def seed_interrupted_run():
+            store.create_queued(analysis_id, request)
+            store._mark_started(analysis_id)
+            if persist_core:
+                store._persist_core_result(analysis_id, build_deterministic_result(
+                    snapshot, request, analysis_id, app.state.settings.snapshot_manifest_sha256))
+            return store.event_bounds(analysis_id)[1]
+        cursor = client.portal.call(seed_interrupted_run)
+        # Closing this isolated lifespan models a lost client and interrupted process.
+    with TestClient(app) as client:
+        class ForbiddenProvider:
+            def __getattr__(self, name):
+                raise AssertionError("Recovery must not invoke LLM")
+        app.state.llm_provider = ForbiddenProvider()
+        response = client.get(f"/api/analyses/{analysis_id}/trace/events", headers={"Last-Event-ID": str(cursor)})
+        assert response.status_code == 200
+        assert [int(line[4:]) for line in response.text.splitlines() if line.startswith("id: ")] == [cursor + 1, cursor + 2]
+        assert "event: run_interrupted" in response.text
+        assert f"event: run_{'partial' if persist_core else 'failed'}" in response.text
+        result = client.get(f"/api/analyses/{analysis_id}").json()
+        assert result["state"] == ("partial" if persist_core else "failed")
+        if persist_core:
+            assert result["result"]["fwi"]["value"] == 3
 
 
 def test_trace_query_returns_only_persisted_ordered_events_and_resolved_run_refs(

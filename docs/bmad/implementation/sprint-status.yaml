@@ -47,10 +47,10 @@ development_status:
   1-9-verificar-el-recorrido-mvp-con-snapshot-y-openai-reales: done
   epic-1-retrospective: optional
 
-  epic-2: in-progress
+  epic-2: done
   2-1-consultar-método-procedencia-cobertura-y-calidad-de-datos: done
   2-2-consultar-detecciones-firms-con-sus-cautelas: done
   2-3-presentar-los-hallazgos-exploratorios-con-denominadores: done
   2-4-completar-accesibilidad-y-presentación-responsive-del-anális: done
-  2-5-ensayar-errores-recuperación-local-y-demostración: backlog
+  2-5-ensayar-errores-recuperación-local-y-demostración: done
   epic-2-retrospective: optional

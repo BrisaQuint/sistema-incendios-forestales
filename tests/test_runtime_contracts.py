@@ -238,13 +238,14 @@ def test_analysis_request_has_only_canonical_id_and_local_date() -> None:
         )
 
 
-def test_local_entry_point_uses_one_loopback_worker(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_local_entry_point_uses_one_loopback_worker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("FIREWATCH_LOG_PATH", str(tmp_path / "runtime.log"))
     run_server = Mock()
     monkeypatch.setattr("uvicorn.run", run_server)
 
     main()
 
-    run_server.assert_called_once_with(app, host="127.0.0.1", port=8000, workers=1)
+    run_server.assert_called_once_with(app, host="127.0.0.1", port=8000, workers=1, log_config=None)
 
 
 def test_openapi_exposes_typed_vertical_contracts(ready_runtime: None) -> None:

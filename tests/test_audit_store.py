@@ -204,7 +204,7 @@ def test_failed_deterministic_tool_is_recorded_as_failed_without_success_result(
         store.execute(
             analysis_id,
             lambda: (_ for _ in ()).throw(
-                sqlite3.OperationalError("scientific query failed")
+                sqlite3.OperationalError("CANARY_SECRET_PROMPT scientific query failed")
             ),
         )
 
@@ -213,6 +213,7 @@ def test_failed_deterministic_tool_is_recorded_as_failed_without_success_result(
         assert analysis.state == "failed"
         assert analysis.error_code == "SCIENTIFIC_DATA_QUERY_FAILED"
         assert analysis.result is None
+        assert "CANARY" not in analysis.model_dump_json()
         events = store.events(analysis_id)
         assert [event.event_type for event in events] == [
             "run_queued",

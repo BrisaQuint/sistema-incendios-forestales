@@ -414,12 +414,12 @@ class AuditStore:
             return
         except sqlite3.DatabaseError as error:
             self._fail_tool(
-                analysis_id, "SCIENTIFIC_DATA_QUERY_FAILED", str(error)
+                analysis_id, "SCIENTIFIC_DATA_QUERY_FAILED", "Scientific data query failed."
             )
             return
         except ValidationError as error:
             self._fail_tool(
-                analysis_id, "DETERMINISTIC_RESULT_INVALID", str(error)
+                analysis_id, "DETERMINISTIC_RESULT_INVALID", "Deterministic result validation failed."
             )
             return
 
