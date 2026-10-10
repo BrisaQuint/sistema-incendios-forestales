@@ -42,6 +42,24 @@
         }
       }
     },
+    "/api/study/exploratory": {
+      "get": {
+        "summary": "Get Exploratory Results",
+        "operationId": "get_exploratory_results_api_study_exploratory_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploratoryResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/analyses": {
       "post": {
         "summary": "Create Analysis",
@@ -650,6 +668,110 @@
           "provenance"
         ],
         "title": "DeterministicResult",
+        "type": "object"
+      },
+      "ExploratoryGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "cell_days": {
+            "title": "Cell Days",
+            "type": "integer"
+          },
+          "median_fwi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Fwi"
+          }
+        },
+        "required": [
+          "cell_days",
+          "median_fwi"
+        ],
+        "title": "ExploratoryGroup",
+        "type": "object"
+      },
+      "ExploratoryResults": {
+        "additionalProperties": false,
+        "properties": {
+          "without_detection": {
+            "$ref": "#/components/schemas/ExploratoryGroup"
+          },
+          "with_detection": {
+            "$ref": "#/components/schemas/ExploratoryGroup"
+          },
+          "total_cell_days": {
+            "title": "Total Cell Days",
+            "type": "integer"
+          },
+          "location_count": {
+            "title": "Location Count",
+            "type": "integer"
+          },
+          "calendar_months": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Calendar Months",
+            "type": "array"
+          },
+          "above_reference": {
+            "title": "Above Reference",
+            "type": "integer"
+          },
+          "equal_reference": {
+            "title": "Equal Reference",
+            "type": "integer"
+          },
+          "below_reference": {
+            "title": "Below Reference",
+            "type": "integer"
+          },
+          "percent_above_reference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Above Reference"
+          },
+          "median_anomaly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Anomaly"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SnapshotProvenance"
+          }
+        },
+        "required": [
+          "without_detection",
+          "with_detection",
+          "total_cell_days",
+          "location_count",
+          "calendar_months",
+          "above_reference",
+          "equal_reference",
+          "below_reference",
+          "percent_above_reference",
+          "median_anomaly",
+          "provenance"
+        ],
+        "title": "ExploratoryResults",
         "type": "object"
       },
       "FWIComponents": {

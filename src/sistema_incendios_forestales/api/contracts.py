@@ -101,6 +101,25 @@ class SnapshotProvenance(ContractModel):
     quality_checks: dict[str, QualityCheck]
 
 
+class ExploratoryGroup(ContractModel):
+    cell_days: int
+    median_fwi: float | None
+
+
+class ExploratoryResults(ContractModel):
+    without_detection: ExploratoryGroup
+    with_detection: ExploratoryGroup
+    total_cell_days: int
+    location_count: int
+    calendar_months: list[int]
+    above_reference: int
+    equal_reference: int
+    below_reference: int
+    percent_above_reference: float | None
+    median_anomaly: float | None
+    provenance: SnapshotProvenance
+
+
 class CoverageResponse(ContractModel):
     type: Literal["FeatureCollection"]
     snapshot_version: str
@@ -325,6 +344,7 @@ class TraceResponse(ContractModel):
 
 
 CONTRACT_MODELS = (
+    ExploratoryResults,
     CoverageResponse,
     SourceReference,
     DateRange,

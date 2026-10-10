@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/study/exploratory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Exploratory Results */
+        get: operations["get_exploratory_results_api_study_exploratory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analyses": {
         parameters: {
             query?: never;
@@ -270,6 +287,35 @@ export interface components {
             firms_interpretation: string;
             /** Evidence Refs */
             evidence_refs: string[];
+            provenance: components["schemas"]["SnapshotProvenance"];
+        };
+        /** ExploratoryGroup */
+        ExploratoryGroup: {
+            /** Cell Days */
+            cell_days: number;
+            /** Median Fwi */
+            median_fwi: number | null;
+        };
+        /** ExploratoryResults */
+        ExploratoryResults: {
+            without_detection: components["schemas"]["ExploratoryGroup"];
+            with_detection: components["schemas"]["ExploratoryGroup"];
+            /** Total Cell Days */
+            total_cell_days: number;
+            /** Location Count */
+            location_count: number;
+            /** Calendar Months */
+            calendar_months: number[];
+            /** Above Reference */
+            above_reference: number;
+            /** Equal Reference */
+            equal_reference: number;
+            /** Below Reference */
+            below_reference: number;
+            /** Percent Above Reference */
+            percent_above_reference: number | null;
+            /** Median Anomaly */
+            median_anomaly: number | null;
             provenance: components["schemas"]["SnapshotProvenance"];
         };
         /** FWIComponents */
@@ -632,6 +678,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+        };
+    };
+    get_exploratory_results_api_study_exploratory_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExploratoryResults"];
                 };
             };
         };

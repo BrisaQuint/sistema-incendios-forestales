@@ -22,6 +22,7 @@ from sistema_incendios_forestales.api.contracts import (
     AnalysisRequest,
     AnalysisResult,
     CoverageResponse,
+    ExploratoryResults,
     ErrorResponse,
     ReadinessResponse,
     TraceEventView,
@@ -30,6 +31,7 @@ from sistema_incendios_forestales.api.contracts import (
 from sistema_incendios_forestales.analysis import (
     AnalysisContextError,
     build_deterministic_result,
+    build_exploratory_results,
     validate_analysis_request,
 )
 from sistema_incendios_forestales.audit import AuditStore
@@ -80,6 +82,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.audit_store = audit_store
     application.state.llm_provider = llm_provider
     try:
+        application.state.exploratory_results = build_exploratory_results(
+            snapshot, settings.snapshot_manifest_sha256
+        )
         yield
     finally:
         audit_store.close()
@@ -168,6 +173,11 @@ async def get_coverage(request: Request) -> CoverageResponse:
         date_coverage=manifest["date_coverage"],
         features=snapshot.coverage["features"],
     )
+
+
+@app.get("/api/study/exploratory", response_model=ExploratoryResults)
+async def get_exploratory_results(request: Request) -> ExploratoryResults:
+    return request.app.state.exploratory_results
 
 
 async def _execute_analysis(

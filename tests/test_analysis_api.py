@@ -11,9 +11,69 @@ from fastapi.testclient import TestClient
 
 from conftest import create_valid_snapshot
 from sistema_incendios_forestales.analysis import build_deterministic_result
+from sistema_incendios_forestales.analysis import build_exploratory_results
 from sistema_incendios_forestales.api.app import app
 from sistema_incendios_forestales.api.contracts import AnalysisRequest, DataValue
 from test_mas_orchestrator import ScriptedProvider
+
+
+def test_exploratory_statistics_and_spinup_exclusion() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.executescript("""
+        CREATE TABLE weather_daily(weather_id TEXT, date TEXT, fwi REAL, firms_count INTEGER);
+        CREATE TABLE monthly_fwi_reference(weather_id TEXT, month INTEGER, median_fwi REAL);
+        INSERT INTO monthly_fwi_reference VALUES ('a',1,10),('b',1,20);
+        INSERT INTO weather_daily VALUES
+        ('a','2020-01-01',999,100),('a','2021-01-01',8,0),
+        ('b','2021-01-01',16,0),('a','2022-01-01',10,1),
+        ('a','2023-01-01',14,204),('b','2024-01-01',18,1);
+    """)
+    manifest = {
+        "release_id": "test", "bundle_version": "1.0.0", "schema_version": "v1",
+        "source_references": [], "quality_checks": {},
+        "date_coverage": {"analysis": {"start": "2021-01-01", "end": "2025-12-31"},
+                          "spin_up": {"start": "2020-01-01", "end": "2020-12-31"}},
+    }
+    try:
+        result = build_exploratory_results(SimpleNamespace(connection=connection, manifest=manifest), "abc")
+        assert result.total_cell_days == 5
+        assert result.location_count == 2
+        assert result.without_detection.cell_days == 2
+        assert result.without_detection.median_fwi == 12
+        assert result.with_detection.cell_days == 3
+        assert result.with_detection.median_fwi == 14
+        assert (result.above_reference, result.equal_reference, result.below_reference) == (1, 1, 1)
+        assert result.percent_above_reference == pytest.approx(100 / 3)
+        assert result.median_anomaly == 0
+        connection.execute("UPDATE weather_daily SET firms_count=0")
+        empty = build_exploratory_results(SimpleNamespace(connection=connection, manifest=manifest), "abc")
+        assert empty.with_detection.cell_days == 0
+        assert empty.median_anomaly is None
+        assert empty.percent_above_reference is None
+    finally:
+        connection.close()
+
+
+def test_exploratory_endpoint_is_cached_and_does_not_call_provider(
+    configured_analysis_runtime: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with TestClient(app) as client:
+        class ForbiddenProvider:
+            def __getattr__(self, name):
+                raise AssertionError("Exploratory endpoint must not access LLM")
+        app.state.llm_provider = ForbiddenProvider()
+        def forbidden(*args, **kwargs):
+            raise AssertionError("Aggregates must not be recalculated per request")
+        monkeypatch.setattr("sistema_incendios_forestales.api.app.build_exploratory_results", forbidden)
+        first = client.get("/api/study/exploratory")
+        second = client.get("/api/study/exploratory")
+        assert first.status_code == 200
+        assert first.json() == second.json()
+        assert first.json()["total_cell_days"] == 169
+        assert first.json()["without_detection"]["cell_days"] == 169
+        assert first.json()["with_detection"]["cell_days"] == 0
+    with sqlite3.connect(configured_analysis_runtime) as connection:
+        assert connection.execute("SELECT count(*) FROM analysis_runs").fetchone()[0] == 0
 
 
 @pytest.fixture

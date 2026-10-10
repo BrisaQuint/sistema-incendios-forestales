@@ -4,6 +4,7 @@ import type { components } from "./api/generated";
 type Coverage = components["schemas"]["CoverageResponse"];
 type CoverageFeature = components["schemas"]["CoverageFeature"];
 type Analysis = components["schemas"]["AnalysisResult"];
+type Exploratory = components["schemas"]["ExploratoryResults"];
 type DataValue = components["schemas"]["DataValue"];
 type Trace = components["schemas"]["TraceResponse"];
 type TraceEvent = components["schemas"]["TraceEventView"];
@@ -382,6 +383,20 @@ function TraceInspection({
 }
 
 export default function App() {
+  const [exploratory, setExploratory] = useState<Exploratory | null>(null);
+  const [exploratoryError, setExploratoryError] = useState(false);
+  const studyNumber = (value: number | null, digits = 0) =>
+    value === null ? "No disponible" : value.toLocaleString("es-AR", {
+      minimumFractionDigits: digits, maximumFractionDigits: digits,
+    });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/study/exploratory", { signal: controller.signal })
+      .then((response) => readJson<Exploratory>(response))
+      .then(setExploratory)
+      .catch(() => { if (!controller.signal.aborted) setExploratoryError(true); });
+    return () => controller.abort();
+  }, []);
   const [coverage, setCoverage] = useState<Coverage | null>(null);
   const [coverageError, setCoverageError] = useState<string | null>(null);
   const [weatherId, setWeatherId] = useState("");
@@ -890,6 +905,8 @@ export default function App() {
           </p>
         )}
 
+
+
         {analysis && (
           <TraceInspection
             trace={trace}
@@ -1351,6 +1368,98 @@ export default function App() {
             </section>
           </>
         )}
+        <details className="section study-findings">
+          <summary>Hallazgos del estudio histórico (2021–2025)</summary>
+          <div className="detail-content">
+          <p className="subline">Hallazgos generales del período completo, independientes de la ubicación y fecha seleccionadas.</p>
+          {exploratoryError ? (
+            <p role="alert">No se pudieron cargar los resultados exploratorios.</p>
+          ) : !exploratory ? (
+            <p role="status">Cargando resultados exploratorios…</p>
+          ) : (
+            <>
+              <p>
+                Período: {exploratory.provenance.date_coverage.analysis.start} a{" "}
+                {exploratory.provenance.date_coverage.analysis.end}.{" "}
+                {studyNumber(exploratory.location_count)} ubicaciones;{" "}
+                {studyNumber(exploratory.total_cell_days)} celdas-día;{" "}
+                {exploratory.calendar_months.length} meses calendario.
+                Snapshot: {exploratory.provenance.release_id}.
+              </p>
+              <h3>Comparación global</h3>
+              <p className="subline">Medianas FWI · barras desde cero, con la misma escala.</p>
+              <div className="study-bars">
+                {[
+                  ["Sin detección asociada", exploratory.without_detection],
+                  ["Con detección asociada", exploratory.with_detection],
+                ].map(([label, group]) => {
+                  const data = group as Exploratory["with_detection"];
+                  const maximum = Math.max(exploratory.without_detection.median_fwi ?? 0,
+                    exploratory.with_detection.median_fwi ?? 0);
+                  return <div className="study-bar-row" key={String(label)}>
+                    <strong>{String(label)}</strong>
+                    <span>Mediana FWI: {studyNumber(data.median_fwi, 3)} · {studyNumber(data.cell_days)} celdas-día</span>
+                    <div className="study-bar-track" aria-hidden="true">
+                      <div className="study-bar" style={{ width: `${maximum > 0 ? 100 * (data.median_fwi ?? 0) / maximum : 0}%` }} />
+                    </div>
+                  </div>;
+                })}
+              </div>
+              <h3>Comparación con la referencia local-mensual</h3>
+              <p>Distribución de las {studyNumber(exploratory.with_detection.cell_days)} celdas-día con detecciones.</p>
+              <div className="study-segments" aria-hidden="true">
+                {[exploratory.above_reference, exploratory.equal_reference, exploratory.below_reference].map((count, index) => (
+                  <span key={index} className={`study-segment study-category-${index}`}
+                    style={{ width: `${exploratory.with_detection.cell_days > 0 ? 100 * count / exploratory.with_detection.cell_days : 0}%` }} />
+                ))}
+              </div>
+              <ul className="study-legend">
+                {[
+                  { label: "Superiores", count: exploratory.above_reference },
+                  { label: "Iguales", count: exploratory.equal_reference },
+                  { label: "Inferiores", count: exploratory.below_reference },
+                ].map(({ label, count }, index) => (
+                  <li key={label}>
+                    <span aria-hidden="true" className={`study-swatch study-category-${index}`} />
+                    <span><strong>{label}</strong>: {studyNumber(count)} ({studyNumber(
+                      exploratory.with_detection.cell_days > 0 ? 100 * count / exploratory.with_detection.cell_days : null, 2)}%)</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="study-anomaly">
+                <strong>Anomalía mediana del estudio: {exploratory.median_anomaly !== null && exploratory.median_anomaly > 0 ? "+" : ""}
+                  {studyNumber(exploratory.median_anomaly, 3)} puntos FWI</strong>
+                <p>Corresponde a las {studyNumber(exploratory.with_detection.cell_days)} celdas-día con detecciones del estudio histórico, no al día seleccionado.</p>
+              </div>
+              <p>
+                Resultados históricos y descriptivos, no causales ni predictivos.
+                Las detecciones térmicas FIRMS no equivalen a incendios confirmados;
+                el porcentaje no es una probabilidad, precisión ni sensibilidad.
+                La ausencia de detecciones no demuestra ausencia de incendio.
+              </p>
+              <details>
+                <summary>Metodología y procedencia</summary>
+                <p>
+                  Anomalía = FWI diario menos la mediana del mismo mes calendario y ubicación
+                  durante el período analítico. El porcentaje cuenta anomalías estrictamente
+                  positivas entre todas las celdas-día con detección; los iguales permanecen
+                  en el denominador. Cada celda-día pesa una vez, sin ponderar por detecciones.
+                  El año 2020 se excluye como inicialización.
+                </p>
+                <p>
+                  FIRMS VIIRS S-NPP, clasificación satelital type=0: «Posible incendio de vegetación».
+                  Asociación al centro meteorológico más cercano y al FWI de las 12:00 locales
+                  del mismo día; las detecciones anteriores pueden asociarse a condiciones posteriores.
+                </p>
+                <ul>{exploratory.provenance.source_references.map((source) => (
+                  <li key={source.source_id}>{sourceLabel(source.source_id, source.name)}: <code>{source.reference}</code></li>
+                ))}</ul>
+                <p>Huella SHA-256 del manifiesto: <code>{exploratory.provenance.manifest_sha256}</code></p>
+              </details>
+            </>
+          )}
+          </div>
+        </details>
       </main>
 
       <footer className="footer-note">

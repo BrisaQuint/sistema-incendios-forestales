@@ -3,12 +3,14 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 from uuid import UUID
+from statistics import median
 
 from sistema_incendios_forestales.api.contracts import (
     AnalysisRequest,
     AnalysisResult,
     DataValue,
     DeterministicResult,
+    ExploratoryResults,
 )
 from sistema_incendios_forestales.snapshot import ValidatedSnapshot
 
@@ -17,6 +19,40 @@ class AnalysisContextError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def build_exploratory_results(snapshot: ValidatedSnapshot, manifest_sha256: str) -> ExploratoryResults:
+    """Summarize cell-days, without weighting by individual detection counts."""
+    manifest = snapshot.manifest
+    period = manifest["date_coverage"]["analysis"]
+    rows = snapshot.connection.execute(
+        "SELECT d.weather_id, d.date, d.fwi, d.firms_count, r.median_fwi "
+        "FROM weather_daily d LEFT JOIN monthly_fwi_reference r "
+        "ON r.weather_id = d.weather_id "
+        "AND r.month = CAST(substr(d.date, 6, 2) AS INTEGER) "
+        "WHERE d.date BETWEEN ? AND ?", (period["start"], period["end"]),
+    ).fetchall()
+    if any(row[4] is None for row in rows):
+        raise ValueError("Exploratory results require all monthly references")
+    without = [row[2] for row in rows if row[3] == 0]
+    with_detection = [row[2] for row in rows if row[3] > 0]
+    anomalies = [row[2] - row[4] for row in rows if row[3] > 0]
+    above = sum(value > 0 for value in anomalies)
+    return ExploratoryResults(
+        without_detection={"cell_days": len(without), "median_fwi": median(without) if without else None},
+        with_detection={"cell_days": len(with_detection), "median_fwi": median(with_detection) if with_detection else None},
+        total_cell_days=len(rows),
+        location_count=len({row[0] for row in rows}),
+        calendar_months=sorted({int(row[1][5:7]) for row in rows}),
+        above_reference=above,
+        equal_reference=sum(value == 0 for value in anomalies),
+        below_reference=sum(value < 0 for value in anomalies),
+        percent_above_reference=100 * above / len(anomalies) if anomalies else None,
+        median_anomaly=median(anomalies) if anomalies else None,
+        provenance={key: manifest[key] for key in (
+            "release_id", "bundle_version", "schema_version", "source_references", "date_coverage", "quality_checks"
+        )} | {"manifest_sha256": manifest_sha256},
+    )
 
 
 def _data_value(value: Any, unit: str) -> DataValue:

@@ -12,6 +12,77 @@
   font-size: 15px;
 }
 
+.study-findings {
+  margin-top: 28px;
+  border-top: 1px solid #778a84;
+}
+
+.study-findings > summary {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.study-findings .detail-content {
+  overflow-wrap: anywhere;
+}
+
+.study-bars {
+  display: grid;
+  gap: 20px;
+  margin: 20px 0 28px;
+}
+
+.study-bar-row {
+  display: grid;
+  gap: 6px;
+}
+
+.study-bar-track {
+  background: #e4ebe8;
+  height: 24px;
+  border-left: 2px solid #52665e;
+}
+
+.study-bar {
+  background: #245f69;
+  height: 100%;
+}
+
+.study-segments {
+  display: flex;
+  height: 30px;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #52665e;
+}
+
+.study-segment { height: 100%; }
+.study-category-0 { background: #245f69; }
+.study-category-1 { background: #e4ebe8; }
+.study-category-2 { background: #7a668e; }
+
+.study-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.study-legend li { display: flex; gap: 8px; align-items: baseline; }
+.study-swatch { width: 12px; height: 12px; flex-shrink: 0; border: 1px solid #52665e; }
+
+.study-anomaly {
+  margin: 24px 0;
+  padding: 20px;
+  background: #edf3f1;
+  border: 1px solid #778a84;
+  border-radius: 8px;
+}
+
+.study-anomaly strong { font-size: 1.15rem; }
+.study-anomaly p { margin-bottom: 0; }
+
 * {
   box-sizing: border-box;
 }
