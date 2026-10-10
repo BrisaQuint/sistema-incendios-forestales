@@ -732,3 +732,61 @@ details[open] > summary::before {
     animation-duration: 0.01ms !important;
   }
 }
+
+.provenance-section h3 {
+  margin: 16px 0 10px;
+  font-size: 15px;
+}
+
+.provenance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.provenance-summary > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d8e3dc;
+  border-radius: 8px;
+  background: #f5f8f5;
+}
+
+.provenance-summary dt {
+  margin-bottom: 5px;
+  color: #495b56;
+  font-size: 12px;
+}
+
+.provenance-summary dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.provenance-subdetails {
+  margin-top: 12px;
+  border: 1px solid #d8e3dc;
+  border-radius: 8px;
+}
+
+.provenance-subdetails > summary {
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.provenance-subdetails > .detail-content {
+  padding: 12px;
+}
+
+.technical-digest {
+  overflow-wrap: anywhere;
+}
+
+.technical-digest code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

@@ -92,7 +92,7 @@ El usuario puede consultar los seis componentes calculados y una descripción de
 **Consecuencias verificables:**
 - Se identifican FFMC, DMC, DC, ISI, BUI y FWI.
 - Se informa que la implementación principal está en Python mediante `cffdrs`.
-- Se informa que la implementación Python de FFMC, DMC, DC, ISI, BUI y FWI fue contrastada contra la implementación R `cffdrs` durante 31 días de enero de 2023, con diferencia máxima observada de 0 para los seis componentes en ese período comprobado. El resultado no se generaliza más allá de esos 31 días.
+- La documentación metodológica del proyecto registra el contraste de la implementación Python `cffdrs` frente a R `cffdrs` durante los 31 días de enero de 2023, con diferencia máxima observada de 0 para FFMC, DMC, DC, ISI, BUI y FWI exclusivamente en ese período. Este resultado no se generaliza ni constituye una calibración ecológica local. La comparación se conserva como evidencia técnica para la documentación y la defensa académica, sin requerir su presentación en el dashboard.
 - Se exponen los estados iniciales FFMC=85, DMC=6 y DC=15, y que 2020 funciona como spin-up con estados continuados entre años.
 - No se describe este procedimiento como calibración ecológica específica y validada para La Rioja.
 

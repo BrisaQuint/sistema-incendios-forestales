@@ -399,28 +399,36 @@ para confirmar que el usuario puede completar el flujo con datos y proveedor rea
 
 ### Story 2.1: Consultar método, procedencia, cobertura y calidad de datos
 
-Como técnico que necesita evaluar la confiabilidad del resultado,  
-quiero consultar de dónde provienen los datos y qué validaciones se reportaron,  
+Como técnico que necesita evaluar la confiabilidad del resultado,
+quiero consultar de dónde provienen los datos, qué metodología se utiliza y qué controles de calidad se reportaron,
 para entender el alcance y los límites de la evidencia disponible.
 
-**Dependencias:** 1.3 (contrato de procedencia/resultados).  
-**Prioridad:** P1, demo requerida para explicar límites.  
-**Camino crítico:** no después de 1.4; las fuentes se pueden preparar en paralelo con 1.5 tras congelar contrato de procedencia.  
+**Dependencias:** 1.3 (contrato de procedencia/resultados).
+**Prioridad:** P1, demo requerida para explicar límites.
+**Camino crítico:** no después de 1.4; las fuentes se pueden preparar en paralelo con 1.5 tras congelar contrato de procedencia.
 **Paralelizable:** sí, con 2.2.
 
 **Acceptance Criteria:**
 
-**Given** un resultado disponible  
-**When** el usuario abre fuentes/método/calidad desde la misma superficie  
-**Then** encuentra IGN, Open-Meteo Historical API/ERA5, FIRMS VIIRS S-NPP, método FWI clásico, variables, cobertura de 169 ubicaciones, cuadrícula de planificación 0,25°, 2020 spin-up y período 2021–2025.
+**AC1 — Fuentes, método y cobertura**
 
-**Given** se presenta el contraste de implementación  
-**When** se muestra el estado de validación  
-**Then** especifica Python `cffdrs` frente a R `cffdrs`, 31 días de enero de 2023, diferencia máxima observada 0 para FFMC/DMC/DC/ISI/BUI/FWI solo en ese período, sin generalización ni afirmación de calibración ecológica local.
+**Given** un resultado disponible
+**When** el usuario abre la sección de fuentes, metodología y calidad desde la misma superficie del dashboard
+**Then** encuentra las fuentes IGN, Open-Meteo Historical API/ERA5 y FIRMS VIIRS S-NPP, el método FWI clásico, las variables meteorológicas utilizadas, la cobertura de 169 ubicaciones, la cuadrícula de planificación de 0,25°, el año 2020 utilizado como spin-up y el período analítico 2021–2025.
 
-**Given** se presentan comprobaciones de dataset  
-**When** el usuario consulta calidad  
-**Then** se exponen los conteos y controles exactos de FR-3 con su población/período, sin convertirlos en garantía para otros releases.
+**AC2 — Documentación de validación técnica**
+
+**Given** la documentación metodológica del proyecto
+**When** se consulta la evidencia de contraste de implementaciones
+**Then** se informa que Python `cffdrs` fue contrastado con R `cffdrs` durante los 31 días de enero de 2023, con diferencia máxima observada de 0 para FFMC, DMC, DC, ISI, BUI y FWI exclusivamente durante ese período, sin generalizar el resultado ni afirmar calibración ecológica local.
+
+La comparación entre implementaciones constituye evidencia técnica para la documentación y la defensa académica. No es obligatorio mostrarla en el dashboard.
+
+**AC3 — Calidad y disponibilidad de los conjuntos de datos**
+
+**Given** un resultado disponible
+**When** el usuario consulta la información de calidad de los datos
+**Then** encuentra los conteos y controles establecidos en FR-3, identificando la población, el período y la versión del conjunto de datos correspondientes, sin convertir sus resultados en garantías aplicables a otros releases.
 
 ### Story 2.2: Consultar detecciones FIRMS con sus cautelas
 

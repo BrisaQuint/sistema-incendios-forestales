@@ -47,8 +47,8 @@ development_status:
   1-9-verificar-el-recorrido-mvp-con-snapshot-y-openai-reales: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-consultar-método-procedencia-cobertura-y-calidad-de-datos: backlog
+  epic-2: in-progress
+  2-1-consultar-método-procedencia-cobertura-y-calidad-de-datos: done
   2-2-consultar-detecciones-firms-con-sus-cautelas: backlog
   2-3-presentar-los-hallazgos-exploratorios-con-denominadores: backlog
   2-4-completar-accesibilidad-y-presentación-responsive-del-anális: backlog

@@ -86,6 +86,70 @@ function displayValue(data: DataValue | undefined): string {
   }).format(data.value);
 }
 
+type QualityChecks =
+  components["schemas"]["SnapshotProvenance"]["quality_checks"];
+function qualityNumber(
+  checks: QualityChecks,
+  key: string,
+): number | null {
+  const check = checks[key];
+  return check?.status === "passed" &&
+    typeof check.observed === "number" &&
+    Number.isFinite(check.observed)
+    ? check.observed
+    : null;
+}
+
+function formatCount(value: number | null): string {
+  return value === null
+    ? "No disponible"
+    : new Intl.NumberFormat("es-AR", {
+        maximumFractionDigits: 0,
+      }).format(value);
+}
+
+const QUALITY_LABELS: Record<string, string> = {
+  analysis_cell_days: "Celdas-día del período analítico",
+  duplicate_weather_date_keys: "Claves de ubicación y fecha duplicadas",
+  firms_detected_cell_days: "Celdas-día con detecciones FIRMS asociadas",
+  firms_detection_count: "Detecciones FIRMS individuales",
+  missing_values: "Valores faltantes",
+  negative_fwi_components: "Componentes FWI negativos",
+  non_finite_scientific_values: "Valores científicos no finitos",
+  weather_daily_records: "Registros meteorológicos diarios",
+  weather_location_count: "Ubicaciones meteorológicas",
+};
+
+function qualityLabel(key: string): string {
+  if (QUALITY_LABELS[key]) return QUALITY_LABELS[key];
+
+  const yearlyRecords = /^weather_daily_records_(\d{4})$/.exec(key);
+  if (yearlyRecords) {
+    return `Registros meteorológicos de ${yearlyRecords[1]}`;
+  }
+
+  return key.replaceAll("_", " ");
+}
+
+function sourceLabel(sourceId: string, originalName: string): string {
+  const id = sourceId.toLowerCase();
+
+  if (id.includes("ign") || id.includes("boundary")) {
+    return "Instituto Geográfico Nacional (IGN)";
+  }
+  if (id.includes("open") || id.includes("era5") || id.includes("weather")) {
+    return "Datos meteorológicos históricos — Open-Meteo / ERA5";
+  }
+  if (id.includes("fwi") || id.includes("cffdrs")) {
+    return "Sistema canadiense de índices meteorológicos de incendios (FWI)";
+  }
+  if (id.includes("firms") || id.includes("viirs")) {
+    return "Detecciones térmicas históricas — NASA FIRMS VIIRS S-NPP";
+  }
+
+  return originalName;
+}
+
 function dataStatus(data: DataValue | undefined): string {
   return !data || data.value === null
     ? `Dato no disponible${data?.missing_reason ? `: ${data.missing_reason}` : ""}`
@@ -152,37 +216,81 @@ function traceAvailabilityLabel(status: Trace["trace_status"]): string {
   }[status];
 }
 
-function traceActor(event: TraceEvent): string {
-  if (event.agent_role) {
-    const roles: Record<string, string> = {
-      contextualizer: "Contextualizador",
-      validator: "Validador",
-      explainer: "Explicador",
+
+const AGENT_ROLES = [
+  ["contextualizer", "Contextualizador"],
+  ["validator", "Validador"],
+  ["explainer", "Explicador"],
+] as const;
+
+function agentSummary(
+  events: TraceEvent[],
+  role: string,
+  runState: Trace["run_state"],
+): { state: string; result: string } {
+  const agentEvents = events.filter(
+    (event) => event.agent_role === role,
+  );
+
+  const latest = [...agentEvents].sort(
+    (a, b) => b.sequence - a.sequence,
+  )[0];
+
+  if (!latest) {
+    return {
+      state:
+        runState === "completed" ||
+        runState === "partial" ||
+        runState === "failed"
+          ? "No ejecutado / sin registro"
+          : "Pendiente",
+      result: "No hay intervención registrada para este agente.",
     };
-    return roles[event.agent_role] ?? event.agent_role;
   }
-  if (event.tool_name) return `Herramienta · ${event.tool_name}`;
-  return "Sistema";
+
+  const failed = agentEvents.find(
+    (event) =>
+      event.event_type === "intervention_failed" ||
+      Boolean(event.error_code),
+  );
+
+  if (failed) {
+    return {
+      state: "Fallido",
+      result: failed.error_code
+        ? `Error ${failed.error_code}`
+        : "La intervención falló.",
+    };
+  }
+
+  const completed = agentEvents.find(
+    (event) => event.event_type === "intervention_completed",
+  );
+
+  if (completed) {
+    const approved =
+      role === "validator" &&
+      events.some(
+        (event) =>
+          event.event_type === "review_approved" &&
+          event.intervention_id === completed.intervention_id,
+      );
+
+    return {
+      state: approved ? "Aprobado" : "Completado",
+      result: approved
+        ? "Revisión aprobada"
+        : completed.result_summary ??
+          "Intervención completada.",
+    };
+  }
+
+  return {
+    state: "En curso",
+    result: latest.task ?? "Intervención iniciada.",
+  };
 }
 
-function traceState(event: TraceEvent): string {
-  const states: Record<string, string> = {
-    started: "En curso",
-    completed: "Completada",
-    failed: "Fallida",
-    recorded: "Registrado",
-  };
-  if (event.event_type === "run_queued") return "En cola";
-  if (event.event_type === "run_started") return "En curso";
-  if (event.event_type === "run_completed") return "Completado";
-  if (event.event_type === "run_partial") return "Parcial";
-  if (event.event_type === "run_failed") return "Error";
-  if (event.event_type === "run_interrupted") return "Interrumpido";
-  if (event.event_type === "review_approved") return "Aprobada";
-  if (event.event_type === "review_revision_requested") return "Revisión solicitada";
-  if (event.event_type === "tool_failed") return "Fallida";
-  return states[event.status];
-}
 
 function TraceInspection({
   trace,
@@ -222,51 +330,45 @@ function TraceInspection({
               {trace.trace_status === "unavailable"
                 ? "La traza no está disponible para este análisis."
                 : "La traza aún no está registrada."}
-            </p>
+           </p>
           ) : trace?.events.length ? (
-            <div
-              className="table-scroll"
-              role="region"
-              aria-label="Eventos persistidos del análisis"
-              tabIndex={0}
-            >
-              <table className="data-list trace-list">
-                <thead>
-                  <tr>
-                    <th scope="col">Agente</th>
-                    <th scope="col">Tarea</th>
-                    <th scope="col">Estado</th>
-                    <th scope="col">Resultado-Evidencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trace.events.map((event) => (
-                    <tr key={`${event.analysis_id}:${event.sequence}`}>
-                      <td>{traceActor(event)}</td>
-                      <td>{event.task ?? "Evento del run"}</td>
-                      <td>{traceState(event)}</td>
-                      <td>
-                        {event.result_summary ??
-                          (event.error_code
-                            ? `Error ${event.error_code}`
-                            : event.event_type)}
-                        {(event.affected_outputs ?? []).length > 0 && (
-                          <span className="trace-affected">
-                            {" "}
-                            · Afecta: {event.affected_outputs?.join(", ")}
-                          </span>
-                        )}
-                        {Object.entries(event.evidence).map(([reference, label]) => (
-                          <span className="trace-evidence" key={reference}>
-                            {label} · {reference}
-                          </span>
-                        ))}
-                      </td>
+            <>
+              <h3>Intervenciones multiagente</h3>
+
+          <div
+            className="table-scroll"
+            role="region"
+            aria-label="Resumen de intervenciones multiagente"
+            tabIndex={0}
+          >
+            <table className="data-list trace-list">
+              <thead>
+                <tr>
+                  <th scope="col">Agente</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {AGENT_ROLES.map(([role, label]) => {
+                  const summary = agentSummary(
+                    trace.events,
+                    role,
+                    trace.run_state,
+                  );
+
+                  return (
+                    <tr key={role}>
+                      <td>{label}</td>
+                      <td>{summary.state}</td>
+                      <td>{summary.result}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
           ) : (
             <p>
               La traza todavía no está disponible para este análisis. No se
@@ -287,6 +389,7 @@ export default function App() {
   const [periodEnd, setPeriodEnd] = useState("");
   const [activeDate, setActiveDate] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [restoredAnalysis, setRestoredAnalysis] = useState(false);
   const [trace, setTrace] = useState<Trace | null>(null);
   const [traceError, setTraceError] = useState<string | null>(null);
   const [traceConnection, setTraceConnection] = useState<
@@ -308,6 +411,58 @@ export default function App() {
     },
     [],
   );
+  useEffect(() => {
+    const analysisId = new URLSearchParams(window.location.search).get(
+      "analysis_id",
+    );
+
+    if (!analysisId) return;
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(analysisId)) {
+      setAnalysisError("El identificador del análisis no es válido.");
+      setAnalysisState("error");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadSavedAnalysis() {
+      setAnalysisState("running");
+      setAnalysisError(null);
+
+      try {
+        const id = encodeURIComponent(analysisId!);
+
+        const [savedAnalysis, savedTrace] = await Promise.all([
+          fetch(`/api/analyses/${id}`, { signal: controller.signal }).then(
+            (response) => readJson<Analysis>(response),
+          ),
+          fetch(`/api/analyses/${id}/trace`, {
+            signal: controller.signal,
+          }).then((response) => readJson<Trace>(response)),
+        ]);
+
+        if (controller.signal.aborted) return;
+
+        setAnalysis(savedAnalysis);
+        setRestoredAnalysis(true);
+        setTrace(savedTrace);
+        setTraceConnection("idle");
+        setAnalysisState(
+          isTerminalState(savedAnalysis.state) ? "complete" : "running",
+        );
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setAnalysisError(errorMessage(error));
+        setAnalysisState("error");
+      }
+    }
+
+    void loadSavedAnalysis();
+
+    return () => controller.abort();
+  }, []);
+
 
   function closeTraceStream() {
     requestSequence.current += 1;
@@ -743,6 +898,15 @@ export default function App() {
           />
         )}
 
+        {analysis && restoredAnalysis && (
+          <p className="subline" role="status">
+            Análisis histórico recuperado · Ubicación: {analysis.weather_id}
+            {" · "}Fecha: {analysis.date}.
+            Los selectores superiores no representan necesariamente
+            este resultado guardado.
+          </p>
+        )}
+
         {analysis && !result && isTerminalState(analysis.state) && (
           <section
             className="state-message error-message"
@@ -971,44 +1135,207 @@ export default function App() {
                   </div>
                 </details>
 
+
                 <details>
                   <summary>
-                    Fuentes y limitaciones
-                    <span className="summary-meta">Método y procedencia</span>
+                    Fuentes, metodología y calidad
+                    <span className="summary-meta">
+                      Procedencia y límites del análisis
+                    </span>
                   </summary>
-                  <div className="detail-content">
+
+                  <div className="detail-content provenance-section">
+                    <h3>Datos utilizados</h3>
+
+                    <dl className="provenance-summary">
+                      <div>
+                        <dt>Ubicaciones meteorológicas</dt>
+                        <dd>
+                          {formatCount(
+                            qualityNumber(
+                              result.provenance.quality_checks,
+                              "weather_location_count",
+                            ),
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Período analítico</dt>
+                        <dd>
+                          {result.provenance.date_coverage.analysis.start} a{" "}
+                          {result.provenance.date_coverage.analysis.end}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Registros diarios 2020–2025</dt>
+                        <dd>
+                          {formatCount(
+                            qualityNumber(
+                              result.provenance.quality_checks,
+                              "weather_daily_records",
+                            ),
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <h3>Fuentes y metodología</h3>
                     <ul className="source-list">
                       {result.provenance.source_references.map((source) => (
                         <li key={source.source_id}>
-                          <strong>{source.name}</strong> — {source.reference}
+                          <strong>{sourceLabel(source.source_id, source.name)}</strong>
                         </li>
                       ))}
                     </ul>
+
                     <p>
-                      Período de análisis:{" "}
-                      {result.provenance.date_coverage.analysis.start} a{" "}
-                      {result.provenance.date_coverage.analysis.end}. El período
-                      2020 se utiliza para el spin-up del FWI. Release{" "}
-                      {result.provenance.release_id}; manifest SHA-256{" "}
-                      {result.provenance.manifest_sha256}.
+                      El índice FWI clásico se calcula a partir de temperatura,
+                      humedad relativa, viento y precipitación. Se utiliza
+                      información meteorológica histórica, y el período
+                      {` ${result.provenance.date_coverage.spin_up.start} a
+                      ${result.provenance.date_coverage.spin_up.end} `}
+                      permite inicializar la evolución de sus componentes.
                     </p>
+
                     <p>
-                      La diferencia con la referencia es descriptiva, no una
-                      predicción, relación causal ni evaluación de desempeño
-                      predictivo. El FWI describe peligro meteorológico y no
-                      constituye probabilidad de incendio ni alerta oficial.
+                      La cobertura utiliza una cuadrícula de planificación de 0,25°
+                      para las ubicaciones meteorológicas del área de estudio.
+                      Esto no significa que todo el territorio tenga exactamente
+                      esa resolución espacial de observación.
                     </p>
-                    <ul className="quality-list">
-                      {Object.entries(result.provenance.quality_checks).map(
-                        ([name, check]) => (
-                          <li key={name}>
-                            {name}: {String(check.observed)} · {check.status}
-                          </li>
-                        ),
-                      )}
-                    </ul>
+
+                    <h3>Limitaciones</h3>
+                    <p>
+                      El FWI describe peligro meteorológico histórico. No expresa
+                      probabilidad de incendio, no predice eventos y no constituye
+                      una alerta oficial. La asociación con detecciones FIRMS es
+                      descriptiva y no demuestra causalidad.
+                    </p>
+
+                    <details className="provenance-subdetails">
+                      <summary>Calidad y disponibilidad de datos</summary>
+                      <div className="detail-content">
+                        <p>
+                          Controles reportados para el release{" "}
+                          <strong>{result.provenance.release_id}</strong>.
+                          No constituyen garantías para otras versiones.
+                        </p>
+
+                        <dl className="provenance-summary">
+                          <div>
+                            <dt>Celdas-día analizadas (2021–2025)</dt>
+                            <dd>
+                              {formatCount(
+                                qualityNumber(
+                                  result.provenance.quality_checks,
+                                  "analysis_cell_days",
+                                ),
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Celdas-día con detecciones FIRMS</dt>
+                            <dd>
+                              {formatCount(
+                                qualityNumber(
+                                  result.provenance.quality_checks,
+                                  "firms_detected_cell_days",
+                                ),
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Celdas-día sin detecciones asociadas</dt>
+                            <dd>
+                              {(() => {
+                                const total = qualityNumber(
+                                  result.provenance.quality_checks,
+                                  "analysis_cell_days",
+                                );
+                                const detected = qualityNumber(
+                                  result.provenance.quality_checks,
+                                  "firms_detected_cell_days",
+                                );
+                                return formatCount(
+                                  total !== null &&
+                                    detected !== null &&
+                                    detected <= total
+                                    ? total - detected
+                                    : null,
+                                );
+                              })()}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Detecciones FIRMS individuales</dt>
+                            <dd>
+                              {formatCount(
+                                qualityNumber(
+                                  result.provenance.quality_checks,
+                                  "firms_detection_count",
+                                ),
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+
+                        <p className="subline">
+                          Una celda-día sin detecciones FIRMS asociadas no demuestra
+                          que no haya ocurrido un incendio.
+                        </p>
+                    <details className="provenance-subdetails">
+                      <summary>Ver controles detallados</summary>
+                      <div className="detail-content">
+                        <ul className="quality-list">
+                          {Object.entries(result.provenance.quality_checks).map(
+                            ([name, check]) => (
+                              <li key={name}>
+                                <strong>{qualityLabel(name)}</strong>:{" "}
+                                {typeof check.observed === "number"
+                                  ? new Intl.NumberFormat("es-AR").format(check.observed)
+                                  : String(check.observed)}
+                                {" · "}
+                                {check.status === "passed"
+                                  ? "Control aprobado"
+                                  : "Estado no disponible"}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    </details>
+
+                      </div>
+                    </details>
+
+                    <details className="provenance-subdetails">
+                      <summary>Referencias y procedencia técnica</summary>
+                      <div className="detail-content">
+                        <ul className="source-list">
+                          {result.provenance.source_references.map((source) => (
+                            <li key={source.source_id}>
+                              <strong>{source.name}</strong> — {source.reference}
+                            </li>
+                          ))}
+                        </ul>
+
+                        <p>
+                          Release: {result.provenance.release_id}
+                          <br />
+                          Versión del bundle: {result.provenance.bundle_version}
+                          <br />
+                          Versión del esquema: {result.provenance.schema_version}
+                        </p>
+
+                        <p className="technical-digest">
+                          SHA-256 del manifiesto:{" "}
+                          <code>{result.provenance.manifest_sha256}</code>
+                        </p>
+                      </div>
+                    </details>
                   </div>
                 </details>
+
 
               </div>
             </section>
