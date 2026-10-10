@@ -5,8 +5,13 @@ from typing import Any
 
 import httpx2 as httpx
 import pytest
-from openai import APITimeoutError, APIConnectionError, AuthenticationError, RateLimitError
-
+from openai import (
+    APITimeoutError,
+    APIConnectionError,
+    AuthenticationError,
+    BadRequestError,
+    RateLimitError,
+)
 from sistema_incendios_forestales.llm import (
     LLMAuthenticationError,
     LLMMockResponseMissingError,
@@ -294,3 +299,36 @@ def test_mock_requires_explicit_response_and_validates_it() -> None:
     )
     assert response.provider == "mock"
     assert response.output == {"summary": "mock result"}
+
+def test_openai_bad_request_is_classified_without_leaking_provider_details() -> None:
+    request = httpx.Request(
+        "POST",
+        "https://api.openai.com/v1/chat/completions",
+    )
+    response = httpx.Response(
+        400,
+        request=request,
+        json={
+            "error": {
+                "message": "Sensitive provider diagnostic",
+                "type": "invalid_request_error",
+                "code": "invalid_json_schema",
+                "param": "response_format",
+            }
+        },
+    )
+
+    error = BadRequestError(
+        "Sensitive provider diagnostic",
+        response=response,
+        body=response.json(),
+    )
+
+    client = FakeClient([error])
+    llm = provider(client)
+
+    with pytest.raises(LLMSchemaError) as captured:
+        llm.complete(make_request(), LLMRunBudget(12))
+
+    assert len(client.calls) == 1
+    assert "Sensitive provider diagnostic" not in str(captured.value)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -22,7 +23,7 @@ from openai import (
 )
 
 from sistema_incendios_forestales.api.config import RuntimeSettings
-
+_logger = logging.getLogger(__name__)
 
 class LLMProviderError(RuntimeError):
     """Base class for explicit, safe-to-report provider failures."""
@@ -196,7 +197,7 @@ class OpenAIProvider:
                         "json_schema": {
                             "name": request.schema_name,
                             "strict": True,
-                            "schema": dict(request.json_schema),
+                            "schema": _openai_compatible_schema(request.json_schema),
                         },
                     },
                     max_completion_tokens=reservation.token_count,
@@ -286,6 +287,27 @@ def create_llm_provider(settings: RuntimeSettings) -> LLMProvider:
     )
 
 
+def _openai_compatible_schema(schema: Mapping[str, object]) -> dict:
+    """Adapt the generation schema while preserving local validation."""
+
+    def transform(value):
+        if isinstance(value, dict):
+            result = {}
+            for key, child in value.items():
+                if key == "minLength":
+                    continue
+                if key == "const":
+                    result["enum"] = [transform(child)]
+                else:
+                    result[key] = transform(child)
+            return result
+
+        if isinstance(value, list):
+            return [transform(item) for item in value]
+
+        return value
+
+    return transform(dict(schema))
 def _validator_for(schema: Mapping[str, object]) -> Draft202012Validator:
     try:
         Draft202012Validator.check_schema(schema)
@@ -364,7 +386,40 @@ def _translate_openai_error(error: OpenAIError) -> LLMProviderError:
     if isinstance(error, (APIConnectionError, APITimeoutError, RateLimitError, InternalServerError)):
         return LLMTransientError("OpenAI is temporarily unavailable or the request timed out")
     if isinstance(error, (BadRequestError, APIStatusError)):
-        return LLMSchemaError("OpenAI rejected the structured-output request or schema")
+        detail = error.body if isinstance(error.body, Mapping) else {}
+        provider_error = detail.get("error", detail)
+
+        if not isinstance(provider_error, Mapping):
+            provider_error = {}
+
+        allowed_codes = {
+            "invalid_json_schema",
+            "invalid_request_error",
+            "model_not_found",
+            "unsupported_parameter",
+            "unsupported_value",
+        }
+
+        raw_code = provider_error.get("code")
+        raw_type = provider_error.get("type")
+
+        safe_code = raw_code if raw_code in allowed_codes else "other"
+        safe_type = (
+            raw_type
+            if raw_type in {"invalid_request_error", "not_found_error"}
+            else "other"
+        )
+
+        _logger.warning(
+            "OpenAI request rejected: status=%s type=%s code=%s",
+            error.status_code,
+            safe_type,
+            safe_code,
+        )
+
+        return LLMSchemaError(
+            "OpenAI rejected the structured-output request or schema"
+        )
     return LLMProviderError(f"OpenAI request failed ({type(error).__name__})")
 
 

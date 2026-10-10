@@ -1,0 +1,40 @@
+{
+  "story": "1.9",
+  "attempted_at": "2026-10-08T03:33:13-03:00",
+  "status": "blocked_preflight",
+  "acceptance_passed": false,
+  "provider_required": "openai",
+  "mock_used": false,
+  "live_openai_request_made": false,
+  "blocker": "OPENAI_API_KEY and explicit OpenAI runtime configuration are not available in this environment.",
+  "snapshot_preflight": {
+    "release_id": "2026-10-08-2",
+    "directory": "data/snapshots/2026-10-08-2",
+    "bundle_version": "1.0.0",
+    "manifest_sha256": "45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a",
+    "locations": 169
+  },
+  "deterministic_candidate_check": {
+    "weather_id": "-27.50000_-68.50000",
+    "date": "2021-01-01",
+    "fwi": 57.34255495257417,
+    "scope": "Direct deterministic result construction from the validated snapshot only; not an API or end-to-end analysis run."
+  },
+  "required_environment": [
+    "FIREWATCH_SNAPSHOT_DIR=data/snapshots/2026-10-08-2",
+    "FIREWATCH_SNAPSHOT_VERSION=1.0.0",
+    "FIREWATCH_SNAPSHOT_MANIFEST_SHA256=45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a",
+    "FIREWATCH_LLM_PROVIDER=openai",
+    "OPENAI_API_KEY=<set locally; do not store in this record>",
+    "FIREWATCH_OPENAI_MODEL=<valid model>",
+    "FIREWATCH_LLM_TIMEOUT_SECONDS=<finite positive number>",
+    "FIREWATCH_LLM_MAX_RETRIES=<integer 0..2>",
+    "FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN=<positive integer>"
+  ],
+  "reproduction": {
+    "command": ".venv\\Scripts\\python.exe -",
+    "operation": "For each data/snapshots release, read manifest.json, compute SHA-256, call validate_snapshot(directory, bundle_version, digest), then construct AnalysisRequest(weather_id='-27.50000_-68.50000', date=2021-01-01) and call build_deterministic_result(snapshot, request, uuid4(), digest).",
+    "result": "Both available releases validated and returned FWI 57.34255495257417 for the candidate context."
+  },
+  "secrets_or_prompts_recorded": false
+}
