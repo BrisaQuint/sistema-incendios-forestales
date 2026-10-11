@@ -42,6 +42,24 @@
         }
       }
     },
+    "/api/coverage/province": {
+      "get": {
+        "summary": "Get Province Boundary",
+        "operationId": "get_province_boundary_api_coverage_province_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvinceBoundaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/study/exploratory": {
       "get": {
         "summary": "Get Exploratory Results",
@@ -915,6 +933,74 @@
         ],
         "title": "PolygonGeometry",
         "type": "object"
+      },
+      "ProvinceBoundaryResponse": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "FeatureCollection",
+            "title": "Type"
+          },
+          "release_id": {
+            "type": "string",
+            "title": "Release Id"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/ProvinceFeature"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "release_id",
+          "features"
+        ],
+        "title": "ProvinceBoundaryResponse"
+      },
+      "ProvinceFeature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type"
+          },
+          "geometry": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PolygonGeometry"
+              },
+              {
+                "$ref": "#/components/schemas/MultiPolygonGeometry"
+              }
+            ],
+            "title": "Geometry",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+                "Polygon": "#/components/schemas/PolygonGeometry"
+              }
+            }
+          },
+          "properties": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Properties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "geometry",
+          "properties"
+        ],
+        "title": "ProvinceFeature"
       },
       "QualityCheck": {
         "additionalProperties": false,

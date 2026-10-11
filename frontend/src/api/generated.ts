@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coverage/province": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Province Boundary */
+        get: operations["get_province_boundary_api_coverage_province_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/study/exploratory": {
         parameters: {
             query?: never;
@@ -364,6 +381,32 @@ export interface components {
                 number
             ][][];
         };
+        /** ProvinceBoundaryResponse */
+        ProvinceBoundaryResponse: {
+            /**
+             * Type
+             * @constant
+             */
+            type: "FeatureCollection";
+            /** Release Id */
+            release_id: string;
+            /** Features */
+            features: components["schemas"]["ProvinceFeature"][];
+        };
+        /** ProvinceFeature */
+        ProvinceFeature: {
+            /**
+             * Type
+             * @constant
+             */
+            type: "Feature";
+            /** Geometry */
+            geometry: components["schemas"]["PolygonGeometry"] | components["schemas"]["MultiPolygonGeometry"];
+            /** Properties */
+            properties: {
+                [key: string]: unknown;
+            };
+        };
         /** QualityCheck */
         QualityCheck: {
             /**
@@ -678,6 +721,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+        };
+    };
+    get_province_boundary_api_coverage_province_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvinceBoundaryResponse"];
                 };
             };
         };

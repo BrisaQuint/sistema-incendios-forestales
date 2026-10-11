@@ -554,3 +554,23 @@ para demostrar estados completos/parciales/fallidos honestos y recuperar la apli
 | UX-DR10 | 1.4, 2.4 |
 | UX-DR11–12 | 2.4 |
 | UX-DR13 | 1.3, 1.4 |
+
+## Epic 3: Selección geográfica local de ubicaciones meteorológicas
+
+Mejora posterior al MVP, aprobada independientemente de los epics 1 y 2 completados. Conserva la superficie principal UJ-1, los identificadores canónicos y el análisis existente. No amplía las historias anteriores.
+
+### Story 3.1: Seleccionar ubicaciones meteorológicas en mapa local
+
+Como usuario de FireWatch, quiero reconocer y seleccionar una celda de La Rioja en un mapa, para elegir el contexto del análisis sin tener que interpretar solamente un identificador de ubicación.
+
+**Criterios de aceptación:**
+
+1. Al desplegar el mapa, se muestran el contorno provincial y las 169 celdas que intersectan La Rioja, desde el snapshot validado, con procedencia visible. Se distingue el centro geométrico de grilla de la coordenada meteorológica asociada al `weather_id`. La grilla de planificación de 0,25° no se presenta como resolución nativa ERA5.
+2. Al seleccionar una celda se transmite su `weather_id` exacto mediante `chooseLocation`; al cambiar el selector HTML se actualiza el resaltado del mapa, sin sustituciones por cercanía.
+3. Seleccionar una celda no inicia análisis ni envía POST. Se mantienen las validaciones existentes de ubicación y fecha y la ejecución explícita del análisis.
+4. Las 169 ubicaciones siguen disponibles, incluidas las celdas cuyos centros quedan fuera del límite provincial; no se filtran por pertenencia de su centro.
+5. El selector HTML sigue siendo completamente operable por teclado. El mapa permite zoom y desplazamiento con controles identificados y foco visible, sin bloquear la navegación.
+6. La visualización funciona con recursos locales, sin servicios pagos ni teselas externas. Se carga al solicitarla, limpia listeners al desmontarse y, ante un fallo de carga, permite continuar mediante el selector existente.
+7. La presentación se adapta a pantallas estrechas, usa grilla neutra y borde de selección identificable, sin categorías de peligro, mapas de calor, interpolación, pronósticos ni detecciones FIRMS individuales.
+
+**Dependencias:** cobertura canónica de Story 1.3, selección UJ-1 de Story 1.4 y snapshot validado `2026-10-08-2`. No modifica contratos científicos, FWI, agentes ni evidencia histórica.

@@ -69,6 +69,18 @@ class CoverageFeature(ContractModel):
     properties: CoverageProperties
 
 
+class ProvinceFeature(ContractModel):
+    type: Literal["Feature"]
+    geometry: GeoJSONGeometry
+    properties: dict[str, Any]
+
+
+class ProvinceBoundaryResponse(ContractModel):
+    type: Literal["FeatureCollection"]
+    release_id: str
+    features: list[ProvinceFeature]
+
+
 class SourceReference(ContractModel):
     source_id: str
     name: str

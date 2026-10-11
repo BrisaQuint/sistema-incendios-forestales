@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { components } from "./api/generated";
+
+const WeatherLocationMap = lazy(() => import("./WeatherLocationMap").catch(() => ({
+  default: () => <p role="status">No se pudo cargar el mapa. Continúe con el selector de ubicación.</p>,
+})));
 
 type Coverage = components["schemas"]["CoverageResponse"];
 type CoverageFeature = components["schemas"]["CoverageFeature"];
@@ -394,6 +398,7 @@ function TraceInspection({
 }
 
 export default function App() {
+  const [mapVisible, setMapVisible] = useState(false);
   const [exploratory, setExploratory] = useState<Exploratory | null>(null);
   const [exploratoryError, setExploratoryError] = useState(false);
   const studyNumber = (value: number | null, digits = 0) =>
@@ -772,7 +777,7 @@ export default function App() {
         </p>
 
         <form className="context" aria-label="Contexto del análisis" onSubmit={executeAnalysis}>
-          <div className="field">
+          <div className="field location-field">
             <label htmlFor="location">Ubicación o sector de La Rioja</label>
             <select
               id="location"
@@ -795,9 +800,18 @@ export default function App() {
               ))}
             </select>
             <small>
-              El identificador y centro corresponden a una ubicación incluida
-              en la cobertura disponible.
+              El identificador corresponde a la coordenada meteorológica; el centro mostrado corresponde a la celda de grilla.
             </small>
+            {coverage && <details className="location-map-details" onToggle={(event) => setMapVisible(event.currentTarget.open)}>
+              <summary>Seleccionar ubicación en el mapa de La Rioja</summary>
+              <p>Grilla de planificación de 0,25°; no equivale a la resolución nativa de ERA5.
+                Puede seleccionar una celda o utilizar el selector de ubicación con el teclado. Seleccionar no ejecuta un análisis.</p>
+              {selectedFeature && <p className="subline">Centro geométrico de la celda: {selectedFeature.properties.center.latitude}, {selectedFeature.properties.center.longitude}.
+                Coordenada meteorológica asociada al weather_id: {weatherId.replace("_", ", ")}.</p>}
+              {mapVisible && <Suspense fallback={<p role="status">Cargando mapa local…</p>}>
+                <WeatherLocationMap coverage={coverage} selectedId={weatherId} onSelect={chooseLocation} />
+              </Suspense>}
+            </details>}
           </div>
 
           <div className="field">

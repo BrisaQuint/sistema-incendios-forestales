@@ -888,3 +888,14 @@ details[open] > summary::before {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+.location-field { grid-column: 1 / -1; min-width: 0; }
+.location-map-details { margin-top: 12px; min-width: 0; }
+.location-map-details > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.location-map-details p { font-size: 14px; overflow-wrap: anywhere; }
+.location-map { height: 360px; width: 100%; min-width: 0; isolation: isolate; background: #f3f6f4; border: 1px solid #52665e; border-radius: 8px; }
+.location-map[hidden] { display: none; }
+.location-map .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; color: #182522; background: #fff; }
+.location-map :focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+.location-map .leaflet-tooltip { white-space: normal; overflow-wrap: anywhere; max-width: 200px; }
+@media (max-width: 480px) { .location-map { height: 300px; } }

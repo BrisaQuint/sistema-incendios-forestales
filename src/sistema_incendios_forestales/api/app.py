@@ -22,6 +22,7 @@ from sistema_incendios_forestales.api.contracts import (
     AnalysisRequest,
     AnalysisResult,
     CoverageResponse,
+    ProvinceBoundaryResponse,
     ExploratoryResults,
     ErrorResponse,
     ReadinessResponse,
@@ -172,6 +173,15 @@ async def get_coverage(request: Request) -> CoverageResponse:
         source_references=manifest["source_references"],
         date_coverage=manifest["date_coverage"],
         features=snapshot.coverage["features"],
+    )
+
+
+@app.get("/api/coverage/province", response_model=ProvinceBoundaryResponse)
+async def get_province_boundary(request: Request) -> ProvinceBoundaryResponse:
+    snapshot = request.app.state.snapshot
+    return ProvinceBoundaryResponse(
+        type="FeatureCollection", release_id=snapshot.release_id,
+        features=snapshot.province["features"],
     )
 
 

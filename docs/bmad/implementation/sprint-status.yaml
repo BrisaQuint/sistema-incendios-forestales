@@ -54,3 +54,7 @@ development_status:
   2-4-completar-accesibilidad-y-presentación-responsive-del-anális: done
   2-5-ensayar-errores-recuperación-local-y-demostración: done
   epic-2-retrospective: optional
+
+  epic-3: done
+  3-1-seleccionar-ubicaciones-meteorologicas-en-mapa-local: done
+  epic-3-retrospective: optional
