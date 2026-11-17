@@ -80,6 +80,8 @@ Abrir http://127.0.0.1:8000/ y explorar el mapa, cobertura, fechas y hallazgos e
 
 **5. Verificar pruebas y compilación:**
 
+La suite automatizada del producto se encuentra en `tests/`. La configuración de pytest en `pyproject.toml` limita la colección predeterminada a esa carpeta; `src/data/test_fwi_components.py` es un experimento exploratorio heredado que depende de una interfaz histórica de la biblioteca científica y **no** es una prueba de la aplicación.
+
 ~~~powershell
 uv run pytest
 npm --prefix frontend run build
@@ -103,6 +105,11 @@ No se publican automáticamente datasets de origen, el SQLite histórico de audi
 **Licencias/publicación:** antes de cambiar el repositorio a público, el equipo debe revisar el historial de commits y las referencias a datos personales, credenciales y terceros; también debe seleccionar una licencia explícita para el código propio y comprobar las condiciones de los componentes incorporados. No se presupone autorización para redistribuir todo el material.
 
 **Créditos y atribuciones existentes:** consultar [avisos de terceros](THIRD_PARTY_NOTICES.md) para BMAD, cffdrs_py y fuentes científicas. La licencia del código propio de FireWatch sigue pendiente de decisión de sus autores.
+
+
+### Revisión de secretos en el repositorio
+
+Desde la raíz del proyecto, ejecutar `gitleaks git . --log-opts="--all" --redact`. La configuración `.gitleaks.toml` conserva las reglas predeterminadas y exceptúa exclusivamente un falso positivo de `generic-api-key` en la fila `key-screens` del manifiesto instalado por BMAD: el campo es una huella SHA-256 de archivo. La excepción exige simultáneamente la ruta precisa y el formato completo de esa fila; no exime otros datos ni otros tipos de alertas. Cualquier nuevo hallazgo debe examinarse antes de publicar.
 
 ## Detalles técnicos, arquitectura y evidencia
 

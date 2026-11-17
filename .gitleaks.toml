@@ -1,0 +1,15 @@
+title = "FireWatch: secret scanning with a narrow BMAD manifest exception"
+
+[extend]
+useDefault = true
+
+# A Gitleaks generic-api-key false positive was observed on the BMAD
+# installer file manifest, row 'key-screens', which stores a SHA-256 file hash.
+# This exception does NOT ignore the whole manifest nor other Gitleaks rules.
+[[allowlists]]
+description = "BMAD key-screens entry stores a 64-character SHA-256 file digest, not a credential"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)_bmad/_config/files-manifest\.csv$''']
+regexTarget = "line"
+regexes = ['''^\s*"md","key-screens","bmm","bmm/plan/bmad-ux/assets/key-screens\.md","[0-9a-fA-F]{64}"$''']
