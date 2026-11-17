@@ -1,5 +1,112 @@
-# sistema-incendios-forestales
-Sistema de análisis de incendios forestales mediante datos satelitales, meteorológicos e inteligencia artificial.
+# FireWatch — Sistema de análisis de incendios forestales
+
+Sistema de análisis histórico de condiciones meteorológicas y detecciones satelitales de incendios forestales en La Rioja, Argentina. Integra FWI, FIRMS, backend FastAPI, interfaz React y orquestación de agentes de IA para explicaciones trazables. **No es un sistema de predicción de incendios ni presenta el FWI como probabilidad de ocurrencia.**
+
+> **Alcance de esta guía:** el código y las pruebas se versionan aquí; el snapshot científico no se distribuye mediante Git. Para iniciar la aplicación se necesita el snapshot validado 2026-10-08-2. La base de auditoría histórica es independiente. Instalar dependencias no equivale a reproducir íntegramente una ejecución histórica.
+
+## Inicio rápido: ejecución local con snapshot disponible
+
+Guía para **Windows y PowerShell**, el entorno usado en el proyecto. No requiere reconstruir fuentes científicas originales.
+
+**Requisitos:** Git, Python 3.13 o superior, uv (https://docs.astral.sh/uv/), Node.js compatible con Vite 8 y npm. Se requiere conexión para descargar dependencias la primera vez. Python y las dependencias están especificados en .python-version y uv.lock; las del frontend, en frontend/package-lock.json.
+
+**1. Clonar e instalar:**
+
+~~~powershell
+git clone https://github.com/BrisaQuint/sistema-incendios-forestales.git
+cd sistema-incendios-forestales
+uv sync --frozen
+npm --prefix frontend ci
+npm --prefix frontend run build
+~~~
+
+**2. Provisionar el snapshot científico de manera independiente:**
+
+Se requiere el release validado 2026-10-08-2 con esta estructura:
+
+~~~text
+data/
+└── snapshots/
+    └── 2026-10-08-2/
+        ├── manifest.json
+        ├── data/
+        │   └── scientific.sqlite
+        └── coverage/
+            ├── province.geojson
+            └── weather-grid.geojson
+~~~
+
+**Distribución:** el paquete no está en este repositorio. Su enlace de descarga pública está **pendiente de autorización y publicación**, sujetas a la revisión de procedencia y licencias. Hasta entonces la instalación con datos científicos requiere un ejemplar facilitado por el equipo. Sin él, el backend no iniciará.
+
+La huella SHA-256 del manifest.json de la versión validada es:
+
+~~~text
+45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a
+~~~
+
+Comprobar el archivo local:
+
+~~~powershell
+(Get-FileHash 'data/snapshots/2026-10-08-2/manifest.json' -Algorithm SHA256).Hash.ToLower()
+~~~
+
+El backend verifica además los hashes de los otros payloads, esquema, cobertura y consistencia interna antes de declarar disponibilidad.
+
+**3. Configurar en la misma sesión PowerShell:** la aplicación no carga automáticamente archivos .env.
+
+~~~powershell
+$env:FIREWATCH_SNAPSHOT_DIR = (Resolve-Path 'data/snapshots/2026-10-08-2').Path
+$env:FIREWATCH_SNAPSHOT_VERSION = '1.0.0'
+$env:FIREWATCH_SNAPSHOT_MANIFEST_SHA256 = '45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a'
+$env:FIREWATCH_AUDIT_DB = (Join-Path (Get-Location).Path 'data/firewatch-audit.sqlite')
+$env:FIREWATCH_LLM_PROVIDER = 'mock'
+~~~
+
+Si no existe la base de auditoría, el sistema crea una nueva al arrancar; **esa base no contiene la ejecución histórica de la defensa**. El modo mock no trae respuestas de los roles preconfiguradas: no utilizar «Ejecutar este día» para intentar reproducir la explicación OpenAI real de aceptación. Una nueva ejecución con proveedor OpenAI requiere credenciales y configuración propias y puede tener costo.
+
+**4. Iniciar y verificar:**
+
+~~~powershell
+uv run sistema-incendios-forestales
+~~~
+
+En una segunda consola:
+
+~~~powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/api/health/ready'
+~~~
+
+Abrir http://127.0.0.1:8000/ y explorar el mapa, cobertura, fechas y hallazgos exploratorios. La documentación de la API se encuentra en http://127.0.0.1:8000/docs. Si falla el inicio, revisar rutas, huella del manifiesto, build del frontend y puerto 8000.
+
+**5. Verificar pruebas y compilación:**
+
+~~~powershell
+uv run pytest
+npm --prefix frontend run build
+~~~
+
+## Política de datos científicos y alcance de replicabilidad
+
+La exclusión de data/raw/, data/processed/ y data/snapshots/ mediante .gitignore es **intencional**. El código, scripts de procesamiento, contratos, pruebas y dependencias se versionan en Git; los datos se administran como artefactos independientes.
+
+Esta decisión protege la **integridad y trazabilidad científica**: la aplicación valida el manifiesto, huellas SHA-256, esquemas y cobertura geográfica/temporal del release antes de iniciar, y abre el SQLite científico de solo lectura. El snapshot fija el contexto de las consultas históricas y evita sustituirlo silenciosamente por datos recalculados. La construcción de nuevos snapshots es otro procedimiento, no parte del inicio rápido.
+
+**Niveles diferenciados de reproducción:**
+
+- **Código y pruebas:** accesibles desde el repositorio.
+- **Ejecución funcional con datos históricos:** requiere el snapshot científico separado y debidamente validado; no se garantiza con el clon del código solamente.
+- **Recuperación exacta de la demostración con IA:** exige además la base de auditoría histórica (no incluida en Git). La base nueva solo registra nuevas ejecuciones.
+- **Reconstrucción científica desde fuentes originales:** depende de las entradas originales/procesadas, las condiciones de acceso y el pipeline; no queda garantizada únicamente con el repositorio.
+
+No se publican automáticamente datasets de origen, el SQLite histórico de auditoría, claves privadas ni registros locales. Antes de distribuir el ZIP del snapshot, se deben comprobar licencias, procedencia y permisos, mantener la estructura interna del bundle y confirmar su validación de integridad. El enlace al paquete complementario quedará pendiente hasta completar esa revisión.
+
+**Licencias/publicación:** antes de cambiar el repositorio a público, el equipo debe revisar el historial de commits y las referencias a datos personales, credenciales y terceros; también debe seleccionar una licencia explícita para el código propio y comprobar las condiciones de los componentes incorporados. No se presupone autorización para redistribuir todo el material.
+
+## Detalles técnicos, arquitectura y evidencia
+
+La documentación técnica original se conserva a continuación. Véanse también contracts/, docs/bmad/ y docs/defense-readiness.md para contratos, decisiones de diseño, validaciones y límites funcionales.
+
+---
 
 ## Runtime local de FireWatch
 
