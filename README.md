@@ -102,6 +102,8 @@ No se publican automáticamente datasets de origen, el SQLite histórico de audi
 
 **Licencias/publicación:** antes de cambiar el repositorio a público, el equipo debe revisar el historial de commits y las referencias a datos personales, credenciales y terceros; también debe seleccionar una licencia explícita para el código propio y comprobar las condiciones de los componentes incorporados. No se presupone autorización para redistribuir todo el material.
 
+**Créditos y atribuciones existentes:** consultar [avisos de terceros](THIRD_PARTY_NOTICES.md) para BMAD, cffdrs_py y fuentes científicas. La licencia del código propio de FireWatch sigue pendiente de decisión de sus autores.
+
 ## Detalles técnicos, arquitectura y evidencia
 
 La documentación técnica original se conserva a continuación. Véanse también contracts/, docs/bmad/ y docs/defense-readiness.md para contratos, decisiones de diseño, validaciones y límites funcionales.

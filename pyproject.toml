@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Local FireWatch runtime for historical wildfire-weather analysis."
 readme = "README.md"
 authors = [
-    { name = "Brisa", email = "brisaquintero455@gmail.com" }
+    { name = "Brisa" }
 ]
 requires-python = ">=3.13"
 dependencies = [
