@@ -32,3 +32,8 @@ dev = [
     "httpx>=0.28,<1",
     "pytest>=8.4,<10",
 ]
+
+[tool.pytest.ini_options]
+# Pruebas automatizadas del producto. Los scripts exploratorios de src/data
+# no forman parte de la suite y pueden requerir APIs historicas.
+testpaths = ["tests"]
