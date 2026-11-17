@@ -12,4 +12,4 @@ targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''(^|/)_bmad/_config/files-manifest\.csv$''']
 regexTarget = "line"
-regexes = ['''^"md","key-screens","bmm","bmm/plan/bmad-ux/assets/key-screens\.md","[0-9a-fA-F]{64}"$''']
+regexes = ['''^\s*"md","key-screens","bmm","bmm/plan/bmad-ux/assets/key-screens\.md","[0-9a-fA-F]{64}"$''']
