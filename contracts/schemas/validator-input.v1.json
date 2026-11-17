@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/validator-input.v1.json",
+  "title": "Validator input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "analysis_id", "evidence_bundle", "contextualization", "review_number"],
+  "properties": {
+    "schema_version": { "const": "validator-input.v1" },
+    "analysis_id": { "type": "string", "format": "uuid" },
+    "evidence_bundle": { "$ref": "evidence-bundle.v1.json" },
+    "contextualization": { "$ref": "contextualizer-output.v1.json" },
+    "review_number": { "type": "integer", "minimum": 1, "maximum": 2 }
+  }
+}

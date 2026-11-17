@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FireWatch — Análisis contextualizado (base UX UJ-1)</title>
+<style>
+/* Governing spine sections: EXPERIENCE.md — Information Architecture, Component Patterns, Key Flows UJ-1; DESIGN.md — Colors, Typography, Layout & Spacing, Components, Do's and Don'ts. */
+:root {
+  color-scheme: light;
+  --canvas: #F5F7F6;
+  --surface: #FFFFFF;
+  --subtle: #EAF0ED;
+  --ink: #182522;
+  --muted: #495B56;
+  --border: #778A84;
+  --primary: #1E6259;
+  --primary-hover: #184F48;
+  --blue: #286F85;
+  --focus: #005FCC;
+  --caution-ink: #775006;
+  --caution-bg: #FFF5D9;
+  --error-ink: #A1251B;
+  --error-bg: #FDECEA;
+  --firms: #694B83;
+  --radius: 8px;
+  font-family: system-ui, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); font-size: 15px; line-height: 1.5; }
+button, select, input { font: inherit; }
+button, summary, select { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+.topbar-inner { max-width: 1440px; margin: auto; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.brand { font-weight: 720; font-size: 20px; letter-spacing: -.02em; }
+.brand span { color: var(--primary); }
+.scope-label { color: var(--muted); font-size: 13px; text-align: right; }
+main { max-width: 1440px; margin: auto; padding: 26px 28px 56px; }
+.intro { margin: 0 0 20px; }
+.eyebrow { margin: 0 0 5px; color: var(--muted); font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+h1 { margin: 0; font-size: clamp(25px, 2.3vw, 32px); line-height: 1.2; letter-spacing: -.025em; }
+.intro p:last-child { margin: 7px 0 0; color: var(--muted); max-width: 850px; }
+.concept-note { padding: 11px 14px; margin: 16px 0 20px; border: 1px solid var(--border); border-left: 4px solid var(--blue); border-radius: var(--radius); background: var(--surface); color: var(--muted); font-size: 13px; }
+.concept-note strong { color: var(--ink); }
+.context { padding: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto; gap: 14px; align-items: end; }
+.field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 650; }
+.field select, .field input { width: 100%; min-height: 44px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink); background: var(--surface); }
+.field small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+.button { min-height: 44px; padding: 10px 18px; border: 2px solid transparent; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 650; }
+.button:hover { background: var(--primary-hover); }
+.button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.selected-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 18px 0 12px; color: var(--muted); font-size: 13px; }
+.selected-context strong { color: var(--ink); font-weight: 650; }
+.status { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-weight: 650; }
+.status-mark { width: 9px; height: 9px; border: 2px solid currentColor; border-radius: 50%; }
+.result { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+h2 { margin: 0; font-size: 19px; line-height: 1.3; }
+.subline { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.badge { border: 1px solid var(--primary); border-radius: 999px; color: var(--primary); padding: 4px 10px; white-space: nowrap; font-size: 12px; font-weight: 650; }
+.primary-grid { display: grid; grid-template-columns: minmax(230px, .9fr) minmax(300px, 1.35fr) minmax(250px, 1fr); gap: 0; }
+.metric { padding: 21px 22px; border-right: 1px solid var(--border); }
+.metric-label { margin: 0; color: var(--muted); font-size: 13px; font-weight: 650; }
+.metric-row { display: flex; align-items: baseline; gap: 10px; margin-top: 3px; }
+.metric-number { font-variant-numeric: tabular-nums; font-size: 42px; line-height: 1.1; letter-spacing: -.04em; font-weight: 700; }
+.metric-unit { color: var(--muted); font-size: 13px; }
+.metric-caption { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+.compare { padding: 21px 22px; border-right: 1px solid var(--border); }
+.compare-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.compare-top strong { font-size: 14px; }
+.difference { color: var(--primary); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.compare-values { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0 8px; }
+.compare-value { border-left: 3px solid var(--border); padding-left: 10px; }
+.compare-value.observed { border-color: var(--blue); }
+.compare-value small { display: block; color: var(--muted); font-size: 12px; }
+.compare-value strong { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+.summary { padding: 21px 22px; }
+.summary p { margin: 8px 0 0; }
+.summary strong { color: var(--ink); }
+.section { padding: 18px 20px; border-top: 1px solid var(--border); }
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.section-title h3 { margin: 0; font-size: 15px; }
+.section-title span { color: var(--muted); font-size: 12px; }
+.component-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.component { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--subtle); border-radius: 5px; color: var(--ink); font-size: 13px; }
+.component b { font-weight: 700; }
+.component .value-not-shown { color: var(--muted); font-size: 12px; }
+.explanation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.explanation article { padding: 13px 14px; border: 1px solid var(--border); border-radius: 6px; }
+.explanation h4 { margin: 0 0 5px; font-size: 13px; }
+.explanation p { margin: 0; color: var(--muted); font-size: 13px; }
+.details-group { border-top: 1px solid var(--border); }
+details { background: var(--surface); }
+details + details { border-top: 1px solid #D1DBD6; }
+summary { list-style: none; padding: 16px 20px; display: flex; align-items: center; gap: 10px; font-weight: 650; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "+"; display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 4px; color: var(--primary); font-size: 17px; line-height: 1; }
+details[open] > summary::before { content: "−"; }
+.summary-meta { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.detail-content { padding: 0 20px 18px 52px; }
+.table-scroll { overflow-x: auto; }
+.table-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.data-list { width: 100%; border-collapse: collapse; }
+.data-list th, .data-list td { min-width: 150px; }
+.data-list th, .data-list td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #D1DBD6; }
+.data-list th { color: var(--muted); font-size: 12px; }
+.data-list td { font-size: 13px; }
+.data-list td:last-child { color: var(--muted); }
+.firms-note { border-left: 4px solid var(--firms); background: #F5F1F8; padding: 12px 14px; color: var(--ink); font-size: 13px; }
+.firms-note strong { display: block; margin-bottom: 4px; }
+.trace-intro { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.trace-placeholder { padding: 14px; border: 1px dashed var(--border); border-radius: 6px; color: var(--muted); font-size: 13px; }
+.trace-fields { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
+.trace-field { padding: 9px 10px; background: var(--subtle); border-radius: 5px; }
+.trace-field small { display: block; color: var(--muted); font-size: 11px; }
+.trace-field b { display: block; font-size: 12px; }
+.footer-note { padding: 14px 20px 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.footer-note strong { color: var(--ink); }
+@media (max-width: 850px) {
+  .topbar-inner, main { padding-left: 18px; padding-right: 18px; }
+  .primary-grid { grid-template-columns: 1fr 1fr; }
+  .summary { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+  .compare { border-right: 0; }
+}
+@media (max-width: 620px) {
+  .topbar-inner { align-items: flex-start; }
+  .scope-label { max-width: 145px; }
+  main { padding-top: 18px; }
+  .context { grid-template-columns: 1fr; }
+  .button { width: 100%; }
+  .primary-grid { grid-template-columns: 1fr; }
+  .metric, .compare { border-right: 0; border-bottom: 1px solid var(--border); }
+  .summary { grid-column: auto; border-top: 0; }
+  .explanation { grid-template-columns: 1fr; }
+  .trace-fields { grid-template-columns: 1fr 1fr; }
+  .detail-content { padding-left: 20px; }
+  .result-head { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span>Fire</span>Watch</div>
+    <div class="scope-label">Análisis histórico · La Rioja, Argentina</div>
+  </div>
+</header>
+<main>
+  <section class="intro" aria-labelledby="page-title">
+    <p class="eyebrow">Análisis ambiental</p>
+    <h1 id="page-title">Peligro meteorológico de incendio</h1>
+    <p>Explorá las condiciones meteorológicas históricas y su contexto. FireWatch no predice la ocurrencia de incendios.</p>
+  </section>
+
+  <aside class="concept-note" aria-label="Advertencia sobre valores ilustrativos">
+    <strong>Mockup conceptual.</strong> FWI 38, referencia 27 y diferencia +11 reproducen únicamente el ejemplo indicado para UX; no son una observación ni un resultado calculado por FireWatch. Los controles son esquemáticos y no están conectados a datos. Los campos sin valor no se reemplazan por cero.
+  </aside>
+
+  <form class="context" aria-label="Contexto del análisis">
+    <div class="field">
+      <label for="location">Ubicación o sector de La Rioja</label>
+      <select id="location" name="location">
+        <option selected>Seleccionar ubicación o sector</option>
+      </select>
+      <small>Solo se aceptan ubicaciones dentro de la cobertura disponible.</small>
+    </div>
+    <div class="field">
+      <label for="date">Fecha o período disponible</label>
+      <input id="date" name="date" type="text" placeholder="Seleccionar fecha o período" aria-describedby="date-help">
+      <small id="date-help">Análisis principal: 2021–2025; 2020 se usa para inicialización del FWI.</small>
+    </div>
+    <button class="button" type="button">Ejecutar análisis</button>
+  </form>
+
+  <div class="selected-context" aria-label="Contexto mostrado en el ejemplo">
+    <span><strong>Ubicación:</strong> La Rioja · sector seleccionado</span>
+    <span><strong>Fecha:</strong> fecha del ejemplo no especificada</span>
+    <span class="status"><span class="status-mark" aria-hidden="true"></span>Completado · ejemplo</span>
+  </div>
+
+  <section class="result" aria-labelledby="result-title">
+    <div class="result-head">
+      <div>
+        <h2 id="result-title">Resumen del análisis</h2>
+        <p class="subline">El valor se interpreta junto con su referencia para la misma ubicación y mes.</p>
+      </div>
+      <span class="badge">Peligro meteorológico · no es probabilidad</span>
+    </div>
+    <div class="primary-grid">
+      <div class="metric">
+        <p class="metric-label">FWI observado</p>
+        <div class="metric-row"><span class="metric-number">38</span><span class="metric-unit">FWI</span></div>
+        <p class="metric-caption">Valor ilustrativo del ejemplo conceptual.</p>
+      </div>
+      <div class="compare" aria-label="Comparación conceptual con la referencia histórica">
+        <div class="compare-top">
+          <strong>Referencia histórica local-mensual</strong>
+          <span class="difference">+11</span>
+        </div>
+        <div class="compare-values">
+          <div class="compare-value"><small>Referencia histórica</small><strong>27</strong></div>
+          <div class="compare-value observed"><small>FWI observado</small><strong>38</strong></div>
+        </div>
+        <p class="metric-caption">Diferencia respecto de la mediana histórica para esta ubicación y mes.</p>
+      </div>
+      <div class="summary">
+        <p class="metric-label">Síntesis</p>
+        <p>En este <strong>ejemplo conceptual</strong>, el FWI está por encima de su referencia histórica local-mensual. La comparación describe condiciones meteorológicas; no predice ni confirma un incendio.</p>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><h3>Componentes FWI</h3><span>Valores reales aparecen para el análisis seleccionado</span></div>
+      <div class="component-list" aria-label="Componentes calculados">
+        <span class="component"><b>FFMC</b><span class="value-not-shown">ver detalle</span></span>
+        <span class="component"><b>DMC</b><span class="value-not-shown">ver detalle</span></span>
+        <span class="component"><b>DC</b><span class="value-not-shown">ver detalle</span></span>
+        <span class="component"><b>ISI</b><span class="value-not-shown">ver detalle</span></span>
+        <span class="component"><b>BUI</b><span class="value-not-shown">ver detalle</span></span>
+        <span class="component"><b>FWI</b><span class="value-not-shown">38 · ilustrativo</span></span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><h3>Explicación</h3><span>Partes diferenciadas para inspección</span></div>
+      <div class="explanation">
+        <article><h4>Datos observados</h4><p>Variables meteorológicas del contexto seleccionado. Los valores reales dependen del análisis ejecutado.</p></article>
+        <article><h4>Cálculos determinísticos</h4><p>Componentes FWI calculados por herramientas verificables; no los genera el modelo de lenguaje.</p></article>
+        <article><h4>Contextualización e interpretación</h4><p>Explica la comparación con la referencia local-mensual y sus límites, sin añadir categorías de peligro.</p></article>
+      </div>
+    </div>
+    <div class="details-group">
+      <details>
+        <summary>Variables meteorológicas <span class="summary-meta">Detalle del contexto</span></summary>
+        <div class="detail-content">
+          <div class="table-scroll" role="region" aria-label="Tabla de variables meteorológicas; desplázate horizontalmente para ver todas las columnas" tabindex="0">
+            <table class="data-list">
+              <thead><tr><th scope="col">Variable</th><th scope="col">Valor y unidad</th><th scope="col">Estado del dato</th></tr></thead>
+              <tbody>
+                <tr><td>Temperatura a 2 m</td><td>No incluido en este mockup</td><td>En la implementación, indicar el estado real</td></tr>
+                <tr><td>Humedad relativa a 2 m</td><td>No incluido en este mockup</td><td>En la implementación, indicar el estado real</td></tr>
+                <tr><td>Velocidad del viento a 10 m</td><td>No incluido en este mockup</td><td>En la implementación, indicar el estado real</td></tr>
+                <tr><td>Precipitación</td><td>No incluido en este mockup</td><td>En la implementación, indicar el estado real</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="subline">En los resultados reales, mostrar valores con unidades. Si un dato falta, explicar que no está disponible; nunca sustituirlo por cero.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Evidencia FIRMS <span class="summary-meta">Condicional · detección térmica histórica</span></summary>
+        <div class="detail-content">
+          <div class="firms-note">
+            <strong>Interpretación de detecciones</strong>
+            FIRMS `type=0` significa *presumed vegetation fire*. Una detección térmica no confirma por sí sola un incendio individual; la ausencia de detecciones asociadas no demuestra ausencia de incendio.
+          </div>
+          <p class="subline">La asociación de detecciones con el FWI de las 12:00 local del mismo día es histórica y descriptiva, no predictiva. Una detección anterior a las 12:00 puede quedar asociada a condiciones meteorológicas posteriores dentro de ese día.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Fuentes y limitaciones <span class="summary-meta">Método y procedencia</span></summary>
+        <div class="detail-content">
+          <ul>
+            <li>Límites geográficos: Instituto Geográfico Nacional de Argentina.</li>
+            <li>Meteorología histórica: Open-Meteo Historical API utilizando ERA5.</li>
+            <li>Detecciones térmicas: NASA FIRMS, VIIRS S-NPP.</li>
+            <li>Peligro meteorológico: Canadian Fire Weather Index System clásico.</li>
+            <li>Período principal 2021–2025; 2020 se usa para spin-up del FWI.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Trazabilidad del MAS <span class="summary-meta">Secundaria · inspeccionable</span></summary>
+        <div class="detail-content">
+          <p class="trace-intro">Mostrar las intervenciones en el orden realmente registrado. Esta estructura ilustra los campos, no una ejecución real ni agentes definidos.</p>
+          <div class="trace-placeholder">Campos esperados por intervención — valores a completar únicamente desde la traza real:</div>
+          <div class="trace-fields">
+            <div class="trace-field"><small>Agente</small><b>Identificador registrado</b></div>
+            <div class="trace-field"><small>Tarea</small><b>Responsabilidad registrada</b></div>
+            <div class="trace-field"><small>Estado</small><b>Estado registrado</b></div>
+            <div class="trace-field"><small>Resultado</small><b>Evidencia o referencia</b></div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="footer-note"><strong>Alcance:</strong> FireWatch analiza peligro meteorológico histórico. No es predictor ni sistema oficial de alertas.</div>
+  </section>
+</main>
+</body>
+</html>

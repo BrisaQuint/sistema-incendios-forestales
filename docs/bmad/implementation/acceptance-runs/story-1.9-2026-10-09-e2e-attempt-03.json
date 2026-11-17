@@ -1,0 +1,39 @@
+﻿{
+    "story":  "1.9",
+    "attempt":  3,
+    "status":  "e2e_completed",
+    "acceptance_passed":  true,
+    "provider_used":  "openai",
+    "mock_used":  false,
+    "model_configured":  "gpt-6-luna",
+    "analysis_id":  "73356254-ffa8-4397-b208-938579eee91d",
+    "snapshot":  {
+                     "release_id":  "2026-10-08-2",
+                     "manifest_sha256":  "45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a",
+                     "bundle_version":  "1.0.0"
+                 },
+    "analysis":  {
+                     "validated_explanation_visible":  true,
+                     "fwi_displayed":  57.34,
+                     "state":  "completed"
+                 },
+    "mas":  {
+                "contextualizer_completed":  true,
+                "explainer_completed":  true,
+                "validator_approved":  true
+            },
+    "trace":  {
+                  "persisted_events":  11,
+                  "final_event":  "run_completed",
+                  "state":  "completed"
+              },
+    "sse_replay":  {
+                       "replayed_event_count":  11,
+                       "final_replayed_id":  11,
+                       "last_event_id_sent":  "0"
+                   },
+    "privacy":  {
+                    "api_key_recorded":  false,
+                    "prompts_recorded":  false
+                }
+}

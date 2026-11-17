@@ -1,0 +1,37 @@
+{
+  "story": "1.9",
+  "attempted_at": "2026-10-09T14:10:48-03:00",
+  "status": "blocked_before_runtime",
+  "acceptance_passed": false,
+  "provider_required": "openai",
+  "mock_used": false,
+  "live_openai_request_made": false,
+  "blocker": "The PowerShell process available to the acceptance runner did not inherit the locally configured runtime variables or OPENAI_API_KEY. No credentials were requested, copied, or displayed.",
+  "configuration_visibility": {
+    "FIREWATCH_LLM_PROVIDER": "unset",
+    "FIREWATCH_SNAPSHOT_DIR": "unset",
+    "FIREWATCH_SNAPSHOT_VERSION": "unset",
+    "FIREWATCH_SNAPSHOT_MANIFEST_SHA256": "unset",
+    "FIREWATCH_OPENAI_MODEL": "unset",
+    "FIREWATCH_LLM_TIMEOUT_SECONDS": "unset",
+    "FIREWATCH_LLM_MAX_RETRIES": "unset",
+    "FIREWATCH_LLM_MAX_OUTPUT_TOKENS_PER_RUN": "unset",
+    "OPENAI_API_KEY": "unset"
+  },
+  "snapshot_preflight_reused": {
+    "record": "story-1.9-2026-10-08-preflight.json",
+    "release_id": "2026-10-08-2",
+    "manifest_sha256": "45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a",
+    "locations": 169
+  },
+  "steps_executed": [],
+  "steps_not_executed": [
+    "runtime startup",
+    "location/date selection through the API/UI",
+    "analysis API call",
+    "live OpenAI contextualizer/validator/explainer calls",
+    "trace query and SSE replay"
+  ],
+  "secrets_or_prompts_recorded": false,
+  "reproduction_note": "The attempt is reproducible only after making the required environment variables visible to the acceptance runner process. Then execute one TestClient or local-runtime acceptance run against the already validated snapshot and configured real OpenAI provider."
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FireWatch — Estados del análisis (base UX UJ-1)</title>
+<style>
+/* Governing spine sections: EXPERIENCE.md — Component Patterns, State Patterns, Interaction Primitives, Accessibility Floor; DESIGN.md — Colors, Components, Do's and Don'ts. */
+:root{color-scheme:light;--canvas:#F5F7F6;--surface:#FFFFFF;--subtle:#EAF0ED;--ink:#182522;--muted:#495B56;--border:#778A84;--primary:#1E6259;--blue:#286F85;--focus:#005FCC;--caution-ink:#775006;--caution-bg:#FFF5D9;--error-ink:#A1251B;--error-bg:#FDECEA;--success-ink:#236746;--success-bg:#E7F4EC;--purple:#694B83;font-family:system-ui,"Segoe UI",sans-serif;color:var(--ink);background:var(--canvas)}
+*{box-sizing:border-box}body{margin:0;background:var(--canvas);font-size:15px;line-height:1.5}button,select{font:inherit}button,select,summary{cursor:pointer}:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border)}.topbar-inner{max-width:1440px;margin:auto;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-size:20px;font-weight:720}.brand span{color:var(--primary)}.label{font-size:13px;color:var(--muted)}
+main{max-width:1440px;margin:auto;padding:28px}.eyebrow{margin:0 0 5px;color:var(--muted);font-size:13px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}h1{font-size:30px;line-height:1.2;margin:0} .lede{max-width:850px;color:var(--muted);margin:8px 0 18px}
+.notice{padding:12px 15px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:8px;color:var(--muted);font-size:13px;margin:0 0 22px}.notice strong{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.state{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}.state-head{padding:15px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}.state-head h2{font-size:17px;line-height:1.3;margin:0}.pill{border:1px solid var(--primary);color:var(--primary);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:650;white-space:nowrap}.state-body{padding:17px}.context{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:13px;color:var(--muted);font-size:13px}.context strong{color:var(--ink)}.copy{margin:0;color:var(--muted);font-size:14px}.copy strong{color:var(--ink)}
+.event-list{list-style:none;padding:0;margin:14px 0 0;border-left:2px solid var(--border)}.event{position:relative;padding:0 0 14px 16px;font-size:13px}.event:last-child{padding-bottom:0}.event::before{content:"";position:absolute;left:-6px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--primary);border:2px solid var(--surface)}.event small{display:block;color:var(--muted);margin-top:2px}
+.empty{padding:13px 14px;border:1px dashed var(--border);border-radius:6px;color:var(--muted);font-size:13px}.empty strong{display:block;color:var(--ink);margin-bottom:3px}
+.status-box{padding:12px 14px;border-radius:6px;font-size:13px}.status-box.caution{background:var(--caution-bg);color:var(--caution-ink)}.status-box.error{background:var(--error-bg);color:var(--error-ink)}.status-box.success{background:var(--success-bg);color:var(--success-ink)}.status-box p{margin:4px 0 0}.state-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.state-field{padding:9px 10px;background:var(--subtle);border-radius:5px}.state-field small{display:block;color:var(--muted);font-size:11px}.state-field b{font-size:13px}
+.firms{border-left:4px solid var(--purple);padding:11px 13px;background:#F5F1F8;border-radius:0 6px 6px 0;font-size:13px}.firms strong{display:block;margin-bottom:4px}
+.state-foot{padding:12px 17px;border-top:1px solid var(--border);color:var(--muted);font-size:12px}.state-foot strong{color:var(--ink)}
+@media(max-width:760px){main{padding:20px 16px}.grid{grid-template-columns:1fr}.topbar-inner{padding:14px 16px}.state-fields{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div class="brand"><span>Fire</span>Watch</div><div class="label">Estados de análisis · referencia UX</div></div></header>
+<main>
+  <p class="eyebrow">Estados y mensajes</p>
+  <h1>Mostrar lo que ocurrió, no lo que suponemos</h1>
+  <p class="lede">Lámina de estados del mismo recorrido de análisis. El contenido de cada bloque representa reglas de comportamiento, no una ejecución real ni una arquitectura de agentes.</p>
+  <aside class="notice"><strong>Principio común:</strong> conservar ubicación y período seleccionados; diferenciar dato no disponible de cero; exponer agentes o eventos solo cuando la traza real los registre.</aside>
+  <div class="grid">
+    <section class="state" aria-labelledby="complete-title">
+      <header class="state-head"><h2 id="complete-title">Análisis completado</h2><span class="pill">Completado</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Fecha:</strong> fecha seleccionada</span></div>
+        <div class="status-box success" role="status"><strong>Resultados requeridos disponibles.</strong><p>Presentar el FWI con su referencia, diferencia y síntesis; conservar accesibles explicación y traza real.</p></div>
+      </div>
+      <footer class="state-foot"><strong>Traza:</strong> mostrar solo intervenciones registradas y su estado real.</footer>
+    </section>
+
+    <section class="state" aria-labelledby="running-title">
+      <header class="state-head"><h2 id="running-title">Análisis en ejecución</h2><span class="pill">En curso</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Período:</strong> contexto seleccionado</span></div>
+        <p class="copy">La superficie conserva el contexto. No se muestra un spinner como única explicación cuando existe actividad registrada.</p>
+        <div class="empty" style="margin-top:13px"><strong>Aún no hay intervenciones registradas</strong>La actividad del MAS aparecerá cuando el sistema registre eventos. No se simulan agentes, etapas ni progreso.</div>
+      </div>
+      <footer class="state-foot"><strong>Accesibilidad:</strong> el estado se comunica con texto, no solo con animación.</footer>
+    </section>
+
+    <section class="state" aria-labelledby="partial-title">
+      <header class="state-head"><h2 id="partial-title">Análisis parcialmente completado</h2><span class="pill">Parcial</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Fecha:</strong> fecha seleccionada</span></div>
+        <div class="status-box caution" role="status"><strong>El análisis quedó parcialmente completado.</strong><p>Identificar aquí la tarea y salida afectadas según el error real. Mantener visibles los resultados válidos; no presentar el análisis como completo.</p></div>
+        <div class="state-fields">
+          <div class="state-field"><small>Salidas disponibles</small><b>Solo resultados verificados</b></div>
+          <div class="state-field"><small>Parte afectada</small><b>Según evento registrado</b></div>
+        </div>
+      </div>
+      <footer class="state-foot"><strong>Traza:</strong> cada tarea conserva su estado real; no convertir error en éxito.</footer>
+    </section>
+
+    <section class="state" aria-labelledby="error-title">
+      <header class="state-head"><h2 id="error-title">Error del análisis</h2><span class="pill">Error</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Fecha:</strong> fecha seleccionada</span></div>
+        <div class="status-box error" role="status"><strong>No se obtuvo un resultado utilizable para completar el análisis.</strong><p>Indicar la herramienta o tarea afectada y el estado registrado. No mostrar el resultado como completado ni inventar una intervención.</p></div>
+      </div>
+      <footer class="state-foot"><strong>Traza:</strong> conservar únicamente los eventos realmente registrados.</footer>
+    </section>
+
+    <section class="state" aria-labelledby="insufficient-title">
+      <header class="state-head"><h2 id="insufficient-title">Datos insuficientes</h2><span class="pill">Revisión necesaria</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Fecha:</strong> fecha seleccionada</span></div>
+        <div class="status-box caution" role="status"><strong>No se puede completar esta parte del análisis.</strong><p>Indicar qué variable o resultado falta y cómo limita la interpretación. No sustituir el valor faltante por cero.</p></div>
+        <div class="state-fields">
+          <div class="state-field"><small>Resultado disponible</small><b>Identificar si existe</b></div>
+          <div class="state-field"><small>Resultado no disponible</small><b>Explicar motivo</b></div>
+        </div>
+      </div>
+      <footer class="state-foot"><strong>Contexto:</strong> si falta la referencia, separar el FWI observado de la comparación no disponible.</footer>
+    </section>
+
+    <section class="state" aria-labelledby="firms-title">
+      <header class="state-head"><h2 id="firms-title">Sin detecciones FIRMS asociadas</h2><span class="pill">Evidencia histórica</span></header>
+      <div class="state-body">
+        <div class="context"><span><strong>Ubicación:</strong> contexto seleccionado</span><span><strong>Fecha:</strong> fecha seleccionada</span></div>
+        <div class="firms"><strong>No hay detecciones FIRMS asociadas a este contexto.</strong>Esto no demuestra ausencia de incendio. Las detecciones disponibles son térmicas y no confirman por sí solas un incendio individual.</div>
+        <p class="copy" style="margin-top:12px">El análisis FWI válido sigue siendo consultable por separado.</p>
+      </div>
+      <footer class="state-foot"><strong>Presentación:</strong> texto explícito junto al estado; no usar el color o la ausencia de marcadores como único mensaje.</footer>
+    </section>
+  </div>
+</main>
+</body>
+</html>

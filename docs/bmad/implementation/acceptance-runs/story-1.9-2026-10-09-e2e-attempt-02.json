@@ -1,0 +1,110 @@
+{
+  "story": "1.9",
+  "attempt": 2,
+  "attempted_at": "2026-10-09T19:56:54-03:00",
+  "status": "e2e_partial",
+  "acceptance_passed": false,
+  "provider_required": "openai",
+  "provider_used": "openai",
+  "model_reported": "gpt-6-luna",
+  "mock_used": false,
+  "live_openai_request_made": true,
+  "runtime": "http://127.0.0.1:8000",
+  "snapshot_preflight_reused": {
+    "record": "story-1.9-2026-10-08-preflight.json",
+    "release_id": "2026-10-08-2",
+    "directory": "data/snapshots/2026-10-08-2",
+    "bundle_version": "1.0.0",
+    "manifest_sha256": "45fc6de5ca472435c954e93a8a276660907bad0b4e7b20b47668fbd495da833a",
+    "locations": 169
+  },
+  "selection": {
+    "weather_id": "-27.50000_-68.50000",
+    "date": "2021-01-01",
+    "selection_valid": true
+  },
+  "analysis": {
+    "analysis_id": "ffa4107b-3bd4-430d-a537-e2ddc8cc3cd3",
+    "api_http_status": 200,
+    "terminal_state": "partial",
+    "deterministic_result_preserved": true,
+    "fwi": 57.34255495257417,
+    "error_code": "llm_schema_error",
+    "error_message": "The contextualizer intervention failed validation or provider execution.",
+    "affected_outputs": [
+      "contextualization",
+      "validation",
+      "explanation"
+    ]
+  },
+  "mas": {
+    "completed": false,
+    "interventions": [
+      {
+        "role": "contextualizer",
+        "start_persisted": true,
+        "terminal_persisted": true,
+        "terminal_status": "failed",
+        "error_code": "llm_schema_error"
+      }
+    ],
+    "validator_executed": false,
+    "explainer_executed": false,
+    "approved_explanation_present": false
+  },
+  "trace": {
+    "query_http_status": 200,
+    "run_state": "partial",
+    "trace_status": "incomplete",
+    "durable_event_count": 6,
+    "sequences": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "events": [
+      "run_queued",
+      "run_started",
+      "analysis_core_result_persisted",
+      "intervention_started",
+      "intervention_failed",
+      "run_partial"
+    ],
+    "evidence_refs_scoped_to_analysis": true
+  },
+  "sse_replay": {
+    "http_status": 200,
+    "last_event_id_sent": "0",
+    "replayed_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "replayed_event_count": 6,
+    "reexecuted_agents": false
+  },
+  "user_visible_checks": {
+    "status_text": "Parcial · resultado determinístico",
+    "failure_and_affected_outputs_shown": true,
+    "failed_contextualizer_shown_as_agent": true,
+    "unapproved_explanation_shown": false,
+    "scientific_disclaimer_visible": true
+  },
+  "run_repetition": {
+    "analysis_submissions": 1,
+    "automatic_run_retries": 0,
+    "manual_rerun_after_failure": false
+  },
+  "privacy": {
+    "api_key_recorded": false,
+    "prompts_recorded": false,
+    "hidden_reasoning_recorded": false
+  },
+  "acceptance_summary": "Selection, deterministic calculation, partial-result handling, persisted trace, and durable SSE replay were verified. The live OpenAI contextualizer failed with llm_schema_error, so MAS approval and explanation were not achieved; Story 1.9 acceptance remains open."
+}

@@ -1,0 +1,34 @@
+[project]
+name = "sistema-incendios-forestales"
+version = "0.1.0"
+description = "Local FireWatch runtime for historical wildfire-weather analysis."
+readme = "README.md"
+authors = [
+    { name = "Brisa", email = "brisaquintero455@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "cffdrs",
+    "fastapi==0.142.4",
+    "geopandas>=1.1.4",
+    "jsonschema>=4.25,<5",
+    "openai==3.26.0",
+    "pandas>=3.0.6",
+    "uvicorn==0.54.0",
+]
+
+[project.scripts]
+sistema-incendios-forestales = "sistema_incendios_forestales:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+cffdrs = { git = "https://github.com/cffdrs/cffdrs_py.git" }
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1",
+    "pytest>=8.4,<10",
+]

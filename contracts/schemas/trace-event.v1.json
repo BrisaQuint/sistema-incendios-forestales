@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/trace-event.v1.json",
+  "title": "FireWatch trace event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "analysis_id",
+    "sequence",
+    "event_type",
+    "occurred_at",
+    "idempotency_key"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "trace-event.v1"
+    },
+    "analysis_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "event_type": {
+      "enum": [
+        "run_queued",
+        "run_started",
+        "analysis_core_result_persisted",
+        "tool_failed",
+        "intervention_started",
+        "intervention_completed",
+        "intervention_failed",
+        "review_approved",
+        "review_revision_requested",
+        "run_interrupted",
+        "run_completed",
+        "run_partial",
+        "run_failed"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intervention_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "agent_role": {
+      "type": ["string", "null"]
+    },
+    "task": {
+      "type": ["string", "null"]
+    },
+    "input_evidence_refs": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "result_summary": {
+      "type": ["string", "null"]
+    },
+    "output_ref": {
+      "type": ["string", "null"]
+    },
+    "evidence_refs": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "tool_name": {
+      "type": ["string", "null"]
+    },
+    "decision": {
+      "enum": ["approved", "revision_requested", null]
+    },
+    "issue_refs": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "result_ref": {
+      "type": ["string", "null"]
+    },
+    "error_code": {
+      "type": ["string", "null"]
+    },
+    "affected_outputs": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": [
+              "intervention_started",
+              "intervention_completed",
+              "intervention_failed"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": ["intervention_id", "agent_role", "task", "input_evidence_refs"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "intervention_completed"
+          }
+        }
+      },
+      "then": {
+        "required": ["evidence_refs"],
+        "anyOf": [
+          {
+            "properties": {
+              "result_summary": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["result_summary"]
+          },
+          {
+            "properties": {
+              "output_ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["output_ref"]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": ["intervention_failed", "tool_failed"]
+          }
+        }
+      },
+      "then": {
+        "required": ["error_code", "affected_outputs"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "tool_failed"
+          }
+        }
+      },
+      "then": {
+        "required": ["tool_name", "task"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": ["review_approved", "review_revision_requested"]
+          }
+        }
+      },
+      "then": {
+        "required": ["intervention_id", "decision", "issue_refs"],
+        "properties": {
+          "decision": {
+            "const": "approved"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "review_revision_requested"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "revision_requested"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "analysis_core_result_persisted"
+          }
+        }
+      },
+      "then": {
+        "required": ["result_ref"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "enum": ["run_completed", "run_partial", "run_failed"]
+          }
+        }
+      },
+      "then": {
+        "required": ["affected_outputs"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "run_completed"
+          }
+        }
+      },
+      "then": {
+        "required": ["result_ref"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "run_failed"
+          }
+        }
+      },
+      "then": {
+        "required": ["error_code"]
+      }
+    }
+  ]
+}

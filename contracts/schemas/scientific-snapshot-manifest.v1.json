@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://firewatch.local/contracts/scientific-snapshot-manifest.v1.json",
+  "title": "FireWatch scientific snapshot manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_version",
+    "schema_version",
+    "release_id",
+    "provenance",
+    "source_references",
+    "date_coverage",
+    "spatial_coverage",
+    "quality_checks",
+    "payloads"
+  ],
+  "properties": {
+    "bundle_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "schema_version": {
+      "const": "firewatch.scientific-snapshot.v1"
+    },
+    "release_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "provenance": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_references": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "name", "reference"],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "date_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spin_up", "analysis"],
+      "properties": {
+        "spin_up": {
+          "$ref": "#/$defs/date_range"
+        },
+        "analysis": {
+          "$ref": "#/$defs/date_range"
+        }
+      }
+    },
+    "spatial_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["province", "crs", "weather_location_count", "center_inside_count"],
+      "properties": {
+        "province": {
+          "type": "string",
+          "minLength": 1
+        },
+        "crs": {
+          "const": "EPSG:4326"
+        },
+        "weather_location_count": {
+          "const": 169
+        },
+        "center_inside_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 169
+        }
+      }
+    },
+    "quality_checks": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "observed"],
+        "properties": {
+          "status": {
+            "const": "passed"
+          },
+          "observed": {
+            "type": ["integer", "number", "string"]
+          },
+          "expected": {
+            "type": ["integer", "number", "string"]
+          }
+        }
+      }
+    },
+    "payloads": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "media_type", "size_bytes", "sha256"],
+        "properties": {
+          "path": {
+            "enum": [
+              "data/scientific.sqlite",
+              "coverage/province.geojson",
+              "coverage/weather-grid.geojson"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "contains": {
+        "properties": {
+          "path": {
+            "const": "data/scientific.sqlite"
+          }
+        },
+        "required": ["path"]
+      },
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "path": {
+                "const": "coverage/province.geojson"
+              }
+            },
+            "required": ["path"]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "path": {
+                "const": "coverage/weather-grid.geojson"
+              }
+            },
+            "required": ["path"]
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "date_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date"
+        },
+        "end": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1702 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FireWatch API",
+    "description": "Local API and typed contracts for the FireWatch analysis runtime.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health/ready": {
+      "get": {
+        "summary": "Readiness",
+        "operationId": "readiness_api_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coverage": {
+      "get": {
+        "summary": "Get Coverage",
+        "operationId": "get_coverage_api_coverage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coverage/province": {
+      "get": {
+        "summary": "Get Province Boundary",
+        "operationId": "get_province_boundary_api_coverage_province_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvinceBoundaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/study/exploratory": {
+      "get": {
+        "summary": "Get Exploratory Results",
+        "operationId": "get_exploratory_results_api_study_exploratory_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploratoryResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyses": {
+      "post": {
+        "summary": "Create Analysis",
+        "operationId": "create_analysis_api_analyses_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyses/{analysis_id}": {
+      "get": {
+        "summary": "Get Analysis",
+        "operationId": "get_analysis_api_analyses__analysis_id__get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyses/{analysis_id}/trace": {
+      "get": {
+        "summary": "Get Analysis Trace",
+        "operationId": "get_analysis_trace_api_analyses__analysis_id__trace_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analyses/{analysis_id}/trace/events": {
+      "get": {
+        "summary": "Stream Analysis Trace",
+        "operationId": "stream_analysis_trace_api_analyses__analysis_id__trace_events_get",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Analysis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisAccepted": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "state": {
+            "const": "queued",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "state"
+        ],
+        "title": "AnalysisAccepted",
+        "type": "object"
+      },
+      "AnalysisRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "weather_id": {
+            "minLength": 1,
+            "title": "Weather Id",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weather_id",
+          "date"
+        ],
+        "title": "AnalysisRequest",
+        "type": "object"
+      },
+      "AnalysisResult": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "weather_id": {
+            "title": "Weather Id",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "partial",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeterministicResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Message"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Explanation"
+          },
+          "explanation_evidence_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Explanation Evidence Refs"
+          },
+          "provider_metadata": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Provider Metadata",
+            "type": "array"
+          },
+          "affected_outputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Outputs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "weather_id",
+          "date",
+          "state",
+          "result"
+        ],
+        "title": "AnalysisResult",
+        "type": "object"
+      },
+      "Coordinates": {
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "Coordinates",
+        "type": "object"
+      },
+      "CoverageFeature": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "Feature",
+            "title": "Type",
+            "type": "string"
+          },
+          "geometry": {
+            "discriminator": {
+              "mapping": {
+                "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+                "Polygon": "#/components/schemas/PolygonGeometry"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PolygonGeometry"
+              },
+              {
+                "$ref": "#/components/schemas/MultiPolygonGeometry"
+              }
+            ],
+            "title": "Geometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CoverageProperties"
+          }
+        },
+        "required": [
+          "type",
+          "geometry",
+          "properties"
+        ],
+        "title": "CoverageFeature",
+        "type": "object"
+      },
+      "CoverageProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "weather_id": {
+            "minLength": 1,
+            "title": "Weather Id",
+            "type": "string"
+          },
+          "center": {
+            "$ref": "#/components/schemas/Coordinates"
+          },
+          "center_inside": {
+            "title": "Center Inside",
+            "type": "boolean"
+          },
+          "intersects": {
+            "title": "Intersects",
+            "type": "boolean"
+          },
+          "available_dates": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Available Dates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "weather_id",
+          "center",
+          "center_inside",
+          "intersects",
+          "available_dates"
+        ],
+        "title": "CoverageProperties",
+        "type": "object"
+      },
+      "CoverageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "FeatureCollection",
+            "title": "Type",
+            "type": "string"
+          },
+          "snapshot_version": {
+            "title": "Snapshot Version",
+            "type": "string"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "source_references": {
+            "items": {
+              "$ref": "#/components/schemas/SourceReference"
+            },
+            "title": "Source References",
+            "type": "array"
+          },
+          "date_coverage": {
+            "$ref": "#/components/schemas/DateCoverage"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageFeature"
+            },
+            "title": "Features",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "snapshot_version",
+          "release_id",
+          "provenance",
+          "source_references",
+          "date_coverage",
+          "features"
+        ],
+        "title": "CoverageResponse",
+        "type": "object"
+      },
+      "DataValue": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "missing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Reason"
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "missing_reason"
+        ],
+        "title": "DataValue",
+        "type": "object"
+      },
+      "DateCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "spin_up": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/DateRange"
+          }
+        },
+        "required": [
+          "spin_up",
+          "analysis"
+        ],
+        "title": "DateCoverage",
+        "type": "object"
+      },
+      "DateRange": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "DateRange",
+        "type": "object"
+      },
+      "DeterministicResult": {
+        "additionalProperties": false,
+        "properties": {
+          "fwi": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "historical_reference_fwi": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "difference_from_reference": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "components": {
+            "$ref": "#/components/schemas/FWIComponents"
+          },
+          "meteorology": {
+            "$ref": "#/components/schemas/MeteorologicalValues"
+          },
+          "reference_month": {
+            "maximum": 12,
+            "minimum": 1,
+            "title": "Reference Month",
+            "type": "integer"
+          },
+          "firms_count": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "firms_interpretation": {
+            "title": "Firms Interpretation",
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SnapshotProvenance"
+          }
+        },
+        "required": [
+          "fwi",
+          "historical_reference_fwi",
+          "difference_from_reference",
+          "components",
+          "meteorology",
+          "reference_month",
+          "firms_count",
+          "firms_interpretation",
+          "evidence_refs",
+          "provenance"
+        ],
+        "title": "DeterministicResult",
+        "type": "object"
+      },
+      "ExploratoryGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "cell_days": {
+            "title": "Cell Days",
+            "type": "integer"
+          },
+          "median_fwi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Fwi"
+          }
+        },
+        "required": [
+          "cell_days",
+          "median_fwi"
+        ],
+        "title": "ExploratoryGroup",
+        "type": "object"
+      },
+      "ExploratoryResults": {
+        "additionalProperties": false,
+        "properties": {
+          "without_detection": {
+            "$ref": "#/components/schemas/ExploratoryGroup"
+          },
+          "with_detection": {
+            "$ref": "#/components/schemas/ExploratoryGroup"
+          },
+          "total_cell_days": {
+            "title": "Total Cell Days",
+            "type": "integer"
+          },
+          "location_count": {
+            "title": "Location Count",
+            "type": "integer"
+          },
+          "calendar_months": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Calendar Months",
+            "type": "array"
+          },
+          "above_reference": {
+            "title": "Above Reference",
+            "type": "integer"
+          },
+          "equal_reference": {
+            "title": "Equal Reference",
+            "type": "integer"
+          },
+          "below_reference": {
+            "title": "Below Reference",
+            "type": "integer"
+          },
+          "percent_above_reference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Above Reference"
+          },
+          "median_anomaly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Anomaly"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SnapshotProvenance"
+          }
+        },
+        "required": [
+          "without_detection",
+          "with_detection",
+          "total_cell_days",
+          "location_count",
+          "calendar_months",
+          "above_reference",
+          "equal_reference",
+          "below_reference",
+          "percent_above_reference",
+          "median_anomaly",
+          "provenance"
+        ],
+        "title": "ExploratoryResults",
+        "type": "object"
+      },
+      "FWIComponents": {
+        "additionalProperties": false,
+        "properties": {
+          "ffmc": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "dmc": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "dc": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "isi": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "bui": {
+            "$ref": "#/components/schemas/DataValue"
+          }
+        },
+        "required": [
+          "ffmc",
+          "dmc",
+          "dc",
+          "isi",
+          "bui"
+        ],
+        "title": "FWIComponents",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MeteorologicalValues": {
+        "additionalProperties": false,
+        "properties": {
+          "temperature_2m": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "relative_humidity_2m": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "wind_speed_10m": {
+            "$ref": "#/components/schemas/DataValue"
+          },
+          "rain_24h": {
+            "$ref": "#/components/schemas/DataValue"
+          }
+        },
+        "required": [
+          "temperature_2m",
+          "relative_humidity_2m",
+          "wind_speed_10m",
+          "rain_24h"
+        ],
+        "title": "MeteorologicalValues",
+        "type": "object"
+      },
+      "MultiPolygonGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "MultiPolygon",
+            "title": "Type",
+            "type": "string"
+          },
+          "coordinates": {
+            "items": {
+              "items": {
+                "items": {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Coordinates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "coordinates"
+        ],
+        "title": "MultiPolygonGeometry",
+        "type": "object"
+      },
+      "PolygonGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "Polygon",
+            "title": "Type",
+            "type": "string"
+          },
+          "coordinates": {
+            "items": {
+              "items": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Coordinates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "coordinates"
+        ],
+        "title": "PolygonGeometry",
+        "type": "object"
+      },
+      "ProvinceBoundaryResponse": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "FeatureCollection",
+            "title": "Type"
+          },
+          "release_id": {
+            "type": "string",
+            "title": "Release Id"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/ProvinceFeature"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "release_id",
+          "features"
+        ],
+        "title": "ProvinceBoundaryResponse"
+      },
+      "ProvinceFeature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type"
+          },
+          "geometry": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PolygonGeometry"
+              },
+              {
+                "$ref": "#/components/schemas/MultiPolygonGeometry"
+              }
+            ],
+            "title": "Geometry",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+                "Polygon": "#/components/schemas/PolygonGeometry"
+              }
+            }
+          },
+          "properties": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Properties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "geometry",
+          "properties"
+        ],
+        "title": "ProvinceFeature"
+      },
+      "QualityCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "const": "passed",
+            "title": "Status",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Observed"
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected"
+          }
+        },
+        "required": [
+          "status",
+          "observed"
+        ],
+        "title": "QualityCheck",
+        "type": "object"
+      },
+      "ReadinessResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "const": "ready",
+            "title": "Status",
+            "type": "string"
+          },
+          "snapshot_version": {
+            "title": "Snapshot Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "snapshot_version"
+        ],
+        "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "SnapshotProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          },
+          "bundle_version": {
+            "title": "Bundle Version",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "source_references": {
+            "items": {
+              "$ref": "#/components/schemas/SourceReference"
+            },
+            "title": "Source References",
+            "type": "array"
+          },
+          "date_coverage": {
+            "$ref": "#/components/schemas/DateCoverage"
+          },
+          "quality_checks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/QualityCheck"
+            },
+            "title": "Quality Checks",
+            "type": "object"
+          }
+        },
+        "required": [
+          "release_id",
+          "bundle_version",
+          "schema_version",
+          "manifest_sha256",
+          "source_references",
+          "date_coverage",
+          "quality_checks"
+        ],
+        "title": "SnapshotProvenance",
+        "type": "object"
+      },
+      "SourceReference": {
+        "additionalProperties": false,
+        "properties": {
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "name",
+          "reference"
+        ],
+        "title": "SourceReference",
+        "type": "object"
+      },
+      "TraceEventView": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "event_type": {
+            "enum": [
+              "run_queued",
+              "run_started",
+              "analysis_core_result_persisted",
+              "tool_failed",
+              "intervention_started",
+              "intervention_completed",
+              "intervention_failed",
+              "review_approved",
+              "review_revision_requested",
+              "run_interrupted",
+              "run_completed",
+              "run_partial",
+              "run_failed"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "intervention_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intervention Id"
+          },
+          "agent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent Role"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Task"
+          },
+          "status": {
+            "enum": [
+              "started",
+              "completed",
+              "failed",
+              "recorded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "result_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result Summary"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool Name"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "affected_outputs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Outputs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "sequence",
+          "event_type",
+          "occurred_at",
+          "status",
+          "evidence"
+        ],
+        "title": "TraceEventView",
+        "type": "object"
+      },
+      "TraceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "run_state": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "partial",
+              "failed"
+            ],
+            "title": "Run State",
+            "type": "string"
+          },
+          "trace_status": {
+            "enum": [
+              "not_yet_recorded",
+              "available",
+              "incomplete",
+              "unavailable"
+            ],
+            "title": "Trace Status",
+            "type": "string"
+          },
+          "earliest_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Sequence"
+          },
+          "latest_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Sequence"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TraceEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "run_state",
+          "trace_status",
+          "earliest_sequence",
+          "latest_sequence",
+          "events"
+        ],
+        "title": "TraceResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "APIError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "title": "APIError",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/APIError"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "analysis_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Analysis Id"
+          }
+        },
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "TraceEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "trace-event.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "event_type": {
+            "enum": [
+              "run_queued",
+              "run_started",
+              "analysis_core_result_persisted",
+              "tool_failed",
+              "intervention_started",
+              "intervention_completed",
+              "intervention_failed",
+              "review_approved",
+              "review_revision_requested",
+              "run_interrupted",
+              "run_completed",
+              "run_partial",
+              "run_failed"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "intervention_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intervention Id"
+          },
+          "agent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent Role"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Task"
+          },
+          "input_evidence_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Evidence Refs"
+          },
+          "result_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result Summary"
+          },
+          "output_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Output Ref"
+          },
+          "evidence_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Refs"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool Name"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "approved",
+                  "revision_requested"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Decision"
+          },
+          "issue_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Issue Refs"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result Ref"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "affected_outputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Affected Outputs"
+          }
+        },
+        "required": [
+          "schema_version",
+          "analysis_id",
+          "sequence",
+          "event_type",
+          "occurred_at",
+          "idempotency_key"
+        ],
+        "title": "TraceEvent",
+        "type": "object"
+      }
+    }
+  }
+}
